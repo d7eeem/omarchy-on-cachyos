@@ -17,7 +17,7 @@ sudo pacman -Rdd --noconfirm libxnvctrl linux-cachyos-nvidia-open linux-cachyos-
 
 # 3. Install AMD driver profile via chwd
 echo "[*] Installing AMD AMDGPU driver profile..."
-sudo chwd -a amd-gpu 2>/dev/null || true
+sudo chwd -i amd
 
 # 4. Install ROCm stack
 echo "[*] Installing ROCm packages..."

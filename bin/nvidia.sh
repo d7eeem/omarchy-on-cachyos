@@ -15,7 +15,14 @@ GPU_NAME=$(lspci -d 10de: | grep -E "VGA|3D" | head -n1 | sed 's/.*: //')
 echo "[*] NVIDIA GPU detected: $GPU_NAME"
 
 # Determine if a working NVIDIA driver is already installed
-NVIDIA_DRIVER=$(pacman -Qq | grep -E '^nvidia-(dkms|open-dkms|utils)$' | head -n1 || true)
+# Covers all chwd NVIDIA profiles: nvidia-open-dkms (+ its fallback raw dkms
+# package "nvidia-open-dkms"), and the versioned proprietary branches
+# nvidia-580xx-{dkms,utils} / nvidia-470xx-{dkms,utils}. "nvidia-utils" (or
+# its versioned equivalent) is always present regardless of whether the
+# kernel modules come from a per-kernel precompiled package
+# (linux-cachyos-nvidia-open) or a raw dkms package, so matching on the
+# utils/dkms package name alone is sufficient.
+NVIDIA_DRIVER=$(pacman -Qq | grep -E '^nvidia(-open)?(-[0-9]+xx)?-(dkms|utils)$' | head -n1 || true)
 
 if [[ -n "$NVIDIA_DRIVER" ]]; then
     DRIVER_VERSION=$(pacman -Q "$NVIDIA_DRIVER" 2>/dev/null | awk '{print $2}')
@@ -23,7 +30,16 @@ if [[ -n "$NVIDIA_DRIVER" ]]; then
     echo "[*] Respecting existing CachyOS driver installation."
 else
     echo "[!] No NVIDIA driver detected — installing via chwd..."
-    sudo chwd -a
+    # chwd's -a/--autoconfigure takes at most one PCI classid and defaults to
+    # "any" (all PCI+USB classes) when bare, which would also configure
+    # unrelated hardware (e.g. fingerprint readers). Scope it to the same
+    # PCI classes this script already gates on above (VGA / 3D controller),
+    # so only GPU profiles are touched. chwd itself still picks the correct
+    # NVIDIA profile variant (open-dkms/580xx/470xx/nouveau) via its own
+    # device-id matching.
+    for gpu_class_id in 0300 0302; do
+        sudo chwd -a "$gpu_class_id"
+    done
     echo "[*] Driver installed via CachyOS hardware detection."
 fi
 
