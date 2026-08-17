@@ -1,6 +1,18 @@
 #!/bin/bash
 set -euo pipefail
 
+# Apply a sed patch and hard-fail if the target pattern was not present.
+# Usage: patch_or_die <file> <grep-pattern-that-must-exist-BEFORE> <sed-expr>
+patch_or_die() {
+    local file="$1" pattern="$2" expr="$3"
+    grep -q "$pattern" "$file" || {
+        echo "PATCH FAILED: pattern '$pattern' not found in $file — the selected Omarchy version does not match this patch set." >&2
+        echo "Re-run and select the tested version, or update the patches." >&2
+        exit 1
+    }
+    sed -i "$expr" "$file"
+}
+
 # Check if git is installed
 if ! command -v git &> /dev/null; then
     echo "Error: git is not installed. Please install git before running this script."
@@ -92,27 +104,29 @@ echo "Making adjustments to Omarchy install scripts to support CachyOS..."
 cd "$OMARCHY_DIR"
 
 # Remove tldr installation to prevent conflict with tealdeer install.
-sed -i '/tldr/d' install/omarchy-base.packages
+patch_or_die install/omarchy-base.packages '^tldr$' '/^tldr$/d'
 
 # Remove pacman.sh from preflight/all.sh to prevent conflict with cachyos packages
-sed -i '/run_logged \$OMARCHY_INSTALL\/preflight\/pacman\.sh/d' install/preflight/all.sh
+patch_or_die install/preflight/all.sh 'preflight/pacman\.sh' '/run_logged \$OMARCHY_INSTALL\/preflight\/pacman\.sh/d'
 
 # Replace nvidia.sh with custom CachyOS 580xx Driver Logic
+test -d install/config/hardware || { echo "PATCH FAILED: install/config/hardware missing." >&2; exit 1; }
 cp "$SCRIPT_DIR/nvidia.sh" install/config/hardware/nvidia.sh
 chmod +x install/config/hardware/nvidia.sh
 
 # Remove plymouth.sh source line from install.sh
-sed -i '/run_logged \$OMARCHY_INSTALL\/login\/plymouth\.sh/d' install/login/all.sh
+patch_or_die install/login/all.sh 'login/plymouth\.sh' '/run_logged \$OMARCHY_INSTALL\/login\/plymouth\.sh/d'
 
 # Remove limine-snapper.sh source line from install.sh
-sed -i '/run_logged \$OMARCHY_INSTALL\/login\/limine-snapper\.sh/d' install/login/all.sh
+patch_or_die install/login/all.sh 'login/limine-snapper\.sh' '/run_logged \$OMARCHY_INSTALL\/login\/limine-snapper\.sh/d'
 
 # Remove pacman.sh from post-install/all.sh to prevent conflict with cachyos packages
-sed -i '/run_logged \$OMARCHY_INSTALL\/post-install\/pacman\.sh/d' install/post-install/all.sh
+patch_or_die install/post-install/all.sh 'post-install/pacman\.sh' '/run_logged \$OMARCHY_INSTALL\/post-install\/pacman\.sh/d'
 
 # Disable wpa_supplicant and configure NetworkManager to use iwd backend.
 # CachyOS enables wpa_supplicant by default, which conflicts with omarchy's iwd,
 # causing WiFi to appear connected but have no IP or connectivity.
+test -f install/config/hardware/network.sh || { echo "PATCH FAILED: network.sh missing." >&2; exit 1; }
 cat >> install/config/hardware/network.sh << 'NETEOF'
 
 # Disable wpa_supplicant to prevent conflict with iwd
@@ -130,6 +144,7 @@ NETEOF
 
 # Pin walker to the omarchy repo so CachyOS doesn't override it with an
 # incompatible version that breaks compatibility with elephant.
+test -f install/config/walker-elephant.sh || { echo "PATCH FAILED: walker-elephant.sh missing." >&2; exit 1; }
 sed -i '1a\
 # Pin walker to omarchy repo to prevent CachyOS version conflict\
 if ! grep -q "^IgnorePkg.*walker" /etc/pacman.conf 2>/dev/null; then\
@@ -140,6 +155,7 @@ if ! grep -q "^IgnorePkg.*walker" /etc/pacman.conf 2>/dev/null; then\
   fi\
 fi\
 ' install/config/walker-elephant.sh
+grep -q "IgnorePkg.*walker" install/config/walker-elephant.sh || { echo "PATCH FAILED: walker pin not applied." >&2; exit 1; }
 
 # Add fish integrations (upstream only wires bash): mise and zoxide.
 # Lives in the user's fish config, so it survives upstream changes to uwsm/env.
