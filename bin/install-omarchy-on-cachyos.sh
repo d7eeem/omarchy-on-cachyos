@@ -174,9 +174,15 @@ end
 EOF
 
 # Copy omarchy installation files to ~/.local/share/omarchy
-mkdir -p ~/.local/share/omarchy
-cp -r . ~/.local/share/omarchy
-cd ~/.local/share/omarchy
+# Remove any previous install tree first: cp -r over an old tree merges
+# stale files and can fail on permissions (upstream PR #56).
+if [ -d "$HOME/.local/share/omarchy" ]; then
+    echo "Removing previous ~/.local/share/omarchy..."
+    rm -rf "$HOME/.local/share/omarchy"
+fi
+mkdir -p "$HOME/.local/share/omarchy"
+cp -r . "$HOME/.local/share/omarchy"
+cd "$HOME/.local/share/omarchy"
 
 # Pause and prompt for acknowledgment to begin installation
 echo ""

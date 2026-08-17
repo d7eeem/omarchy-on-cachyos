@@ -72,8 +72,10 @@ if [ -d "$TARGET_DIR" ]; then
         echo "Cleaning up previous installation files at $TARGET_DIR..."
         rm -rf "$TARGET_DIR"
     else
-        echo "Proceeding with existing files in $TARGET_DIR..."
-        # If user chooses not to delete, we should skip the clone but continue the script
+        echo "Keeping existing files in $TARGET_DIR."
+        echo "Note: if this tree was already patched by a previous run, the"
+        echo "installer's patch verification will abort. Choose 'y' for a clean"
+        echo "clone if the previous run got past the patching stage."
         exit 0
     fi
 fi

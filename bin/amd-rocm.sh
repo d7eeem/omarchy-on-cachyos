@@ -27,7 +27,9 @@ sudo pacman -S --needed --noconfirm rocm-core rocm-hip-runtime rocm-hip-sdk rocm
 sudo pacman -S --needed --noconfirm libva-utils
 
 # 6. Add AMD ROCm environment variables for UWSM
-cat >>$HOME/.config/uwsm/env <<'EOF'
+mkdir -p "$HOME/.config/uwsm"
+if ! grep -q '^# AMD ROCm$' "$HOME/.config/uwsm/env" 2>/dev/null; then
+    cat >>"$HOME/.config/uwsm/env" <<'EOF'
 
 # AMD ROCm
 export LIBVA_DRIVER_NAME=radeonsi
@@ -38,3 +40,7 @@ export PATH=$ROCM_HOME/bin:$PATH
 export LD_LIBRARY_PATH=$ROCM_HOME/lib:$LD_LIBRARY_PATH
 export VDPAU_DRIVER=radeonsi
 EOF
+    echo "[*] AMD ROCm environment variables written to ~/.config/uwsm/env"
+else
+    echo "[*] AMD ROCm environment variables already present."
+fi
