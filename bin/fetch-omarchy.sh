@@ -21,6 +21,11 @@ done
 
 read -r -p "Enter your choice (1-$(( ${#RELEASES[@]} + 1 ))): " CHOICE
 
+if [[ -n "$CHOICE" && ! "$CHOICE" =~ ^[0-9]+$ ]] || { [[ -n "$CHOICE" ]] && (( CHOICE < 1 || CHOICE > ${#RELEASES[@]} + 1 )); }; then
+    echo "Invalid choice '$CHOICE'. Defaulting to Bleeding Edge."
+    CHOICE=1
+fi
+
 # Formulate arguments based on selection
 if [ "$CHOICE" -eq 1 ] || [ -z "$CHOICE" ]; then
     BRANCH_ARGS=""
