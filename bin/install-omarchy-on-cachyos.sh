@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 # Check if git is installed
 if ! command -v git &> /dev/null; then
