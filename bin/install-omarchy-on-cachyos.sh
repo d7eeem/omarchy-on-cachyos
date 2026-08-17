@@ -9,7 +9,9 @@ fi
 # Fetch Omarchy from repo
 echo "Fetching Omarchy source..."
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-OMARCHY_DIR="$SCRIPT_DIR/../../omarchy"
+REPO_DIR="$(dirname "$SCRIPT_DIR")"
+OMARCHY_DIR="$REPO_DIR/omarchy"
+export OMARCHY_DIR
 
 if [ -f "./fetch-omarchy.sh" ]; then
     chmod +x ./fetch-omarchy.sh
