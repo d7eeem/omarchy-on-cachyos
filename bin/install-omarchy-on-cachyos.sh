@@ -113,9 +113,14 @@ patch_or_die install/omarchy-base.packages '^tldr$' '/^tldr$/d'
 # Remove pacman.sh from preflight/all.sh to prevent conflict with cachyos packages
 patch_or_die install/preflight/all.sh 'preflight/pacman\.sh' '/run_logged \$OMARCHY_INSTALL\/preflight\/pacman\.sh/d'
 
-# Replace nvidia.sh with custom CachyOS 580xx Driver Logic
+# Replace upstream nvidia.sh with a GPU dispatcher
+# (NVIDIA: respect existing CachyOS drivers; AMD: Mesa/ROCm setup — see bin/gpu-setup.sh)
 test -d install/config/hardware || { echo "PATCH FAILED: install/config/hardware missing." >&2; exit 1; }
-cp "$SCRIPT_DIR/nvidia.sh" install/config/hardware/nvidia.sh
+mkdir -p install/config/hardware/omarchy-on-cachyos
+cp "$SCRIPT_DIR/gpu-detect.sh" "$SCRIPT_DIR/gpu-setup.sh" "$SCRIPT_DIR/nvidia.sh" "$SCRIPT_DIR/amd-rocm.sh" \
+   install/config/hardware/omarchy-on-cachyos/
+chmod +x install/config/hardware/omarchy-on-cachyos/*.sh
+cp "$SCRIPT_DIR/gpu-hook.sh" install/config/hardware/nvidia.sh
 chmod +x install/config/hardware/nvidia.sh
 
 # Remove plymouth.sh source line from install.sh
@@ -190,7 +195,7 @@ echo "The following adjustments have been completed."
 echo " 1. Added Omarchy repo to pacman.conf"
 echo " 2. Removed tldr from packages.sh to avoid conflict with tealdeer on CachyOS."
 echo " 3. Disabled further Omarchy changes to pacman.conf, preserving CachyOS settings."
-echo " 4. Replaced nvidia.sh to respect existing CachyOS NVIDIA drivers (only installs if none present)."
+echo " 4. Replaced nvidia.sh with a GPU dispatcher (NVIDIA: respect existing CachyOS drivers; AMD: Mesa/ROCm setup)."
 echo " 5. Removed plymouth.sh from install.sh to avoid conflict with CachyOS login display manager installation."
 echo " 6. Removed limine-snapper.sh from install.sh to avoid conflict with CachyOS boot loader installation."
 echo " 7. Removed /etc/sddm.conf to avoid conflict with Omarchy UWSM session autologin."

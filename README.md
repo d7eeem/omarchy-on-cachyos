@@ -14,7 +14,7 @@ This installation script does the following three things:
   1) Prompts for and fetches your preferred version of Omarchy (Stable tags or Bleeding Edge)
   2) Makes adjustments to the Omarchy install scripts to support installation on CachyOS
   3) Launches the installation of Omarchy on an already setup CachyOS system
-  4) Installs and configures NVIDIA 580xx proprietary drivers
+  4) Detects your GPU vendor and dispatches accordingly: on NVIDIA systems it detects and respects whatever driver CachyOS already has installed; on AMD systems it installs the AMDGPU driver profile plus ROCm/VA-API packages
 
 The CachyOS patches this script applies are tested against the version pinned as `TESTED_OMARCHY_REF` in `bin/fetch-omarchy.sh` (currently `v3.8.4`). Selecting any other version prompts for explicit confirmation, and every patch is verified against the actual file contents at patch time; if a pattern doesn't match, the installer aborts loudly instead of half-applying. Omarchy v4.0.0+ changed its install architecture (no `install.sh`; it installs via Arch packages from an ISO/chroot instead) and is not yet supported by this project.
 
@@ -45,7 +45,7 @@ The philosophy behind this script is to produce a strong and stable blend of Cac
 
 6. Full Disk Encryption: As a distribution, Omarchy automatically turns on full disk encryption via LUKS. This script, however, leaves this decision up to the user. CachyOS can be installed with or without full disk encryption, and this script will install Omarchy on either setup.
 
-7. NVIDIA Drivers: *By default, CachyOS and Omarchy may attempt to use the latest NVIDIA drivers with open kernel modules. This script explicitly downgrades/pins the driver to the* *580xx proprietary series* *using CachyOS's* `chwd` *tool. This is a deliberate choice to fix widespread issues with hardware acceleration, electron apps, and browser flickering.*
+7. GPU Drivers: *This script detects your GPU vendor and dispatches accordingly. On NVIDIA systems, it detects and respects whatever NVIDIA driver CachyOS already has installed rather than pinning or downgrading a specific series. On AMD systems, it installs the AMDGPU driver profile via CachyOS's* `chwd` *tool along with ROCm and VA-API packages. On hybrid NVIDIA+AMD systems, the NVIDIA path wins (see the detection order in* `bin/gpu-detect.sh`*). Intel-only systems are left untouched.*
 
 ## 4. Pre-Requisites
 
@@ -57,11 +57,11 @@ IMPORTANT: This script does not install CachyOS. You must do that separately (an
 
 3. Desktop Environment to Install: You can install a minimal system with no desktop environment or you can choose to install the CachyOS Hyprland Desktop Environment. If you have CachyOS install Hyprland, it will also install SDDM as the login display manager by default. Do not install GNOME or KDE.
 
-4. Graphics Drivers for NVIDIA users: 
+4. Graphics Drivers: 
 
-5. This script now automatically handles NVIDIA driver installation by enforcing the proprietary 580xx drivers (via CachyOS `chwd`). This is necessary to avoid known regressions with hardware video decoding and browser flickering present in the newer open-kernel module drivers.
+5. This script detects your GPU vendor (`bin/gpu-detect.sh`) and dispatches setup accordingly (`bin/gpu-setup.sh`). On NVIDIA systems, it detects and respects whatever driver CachyOS already has installed rather than pinning or downgrading to a specific series. On AMD systems, it installs the AMDGPU driver profile via CachyOS `chwd`, plus the ROCm runtime and VA-API packages (`bin/amd-rocm.sh`) — VA-API only, since Mesa dropped VDPAU support upstream. On hybrid NVIDIA+AMD systems, the NVIDIA path wins (see the detection order in `bin/gpu-detect.sh`). Intel-only systems are left untouched by this script.
 
-   **Important:** 
+   **Important (NVIDIA users):** 
 
    To enable hardware video decode via NVDEC in chromium, you must:
    
