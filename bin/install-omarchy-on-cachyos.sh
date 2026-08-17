@@ -94,11 +94,6 @@ cd "$OMARCHY_DIR"
 # Remove tldr installation to prevent conflict with tealdeer install.
 sed -i '/tldr/d' install/omarchy-base.packages
 
-# Update restart-needed for kernel updates to use cachyos instead of arch
-sed -i "s/ | sed 's\/-arch\/\\\.arch\/'//" bin/omarchy-update-restart
-sed -i "s/'{print \$2}'/'{print \$2 \"-\" \$1}' | sed 's\/-linux\/\/'/" bin/omarchy-update-restart
-sed -i '/linux-cachyos/ ! s/pacman -Q linux/pacman -Q linux-cachyos/' bin/omarchy-update-restart
-
 # Remove pacman.sh from preflight/all.sh to prevent conflict with cachyos packages
 sed -i '/run_logged \$OMARCHY_INSTALL\/preflight\/pacman\.sh/d' install/preflight/all.sh
 
@@ -106,17 +101,11 @@ sed -i '/run_logged \$OMARCHY_INSTALL\/preflight\/pacman\.sh/d' install/prefligh
 cp "$SCRIPT_DIR/nvidia.sh" install/config/hardware/nvidia.sh
 chmod +x install/config/hardware/nvidia.sh
 
-# Fix omarchy-ai-skill.sh symlink to be idempotent on re-runs
-sed -i 's/ln -s/ln -sf/' install/config/omarchy-ai-skill.sh
-
 # Remove plymouth.sh source line from install.sh
 sed -i '/run_logged \$OMARCHY_INSTALL\/login\/plymouth\.sh/d' install/login/all.sh
 
 # Remove limine-snapper.sh source line from install.sh
 sed -i '/run_logged \$OMARCHY_INSTALL\/login\/limine-snapper\.sh/d' install/login/all.sh
-
-# Remove alt-bootloaders.sh source line from install.sh
-sed -i '/run_logged \$OMARCHY_INSTALL\/login\/alt-bootloaders\.sh/d' install/login/all.sh
 
 # Remove pacman.sh from post-install/all.sh to prevent conflict with cachyos packages
 sed -i '/run_logged \$OMARCHY_INSTALL\/post-install\/pacman\.sh/d' install/post-install/all.sh
@@ -152,8 +141,17 @@ if ! grep -q "^IgnorePkg.*walker" /etc/pacman.conf 2>/dev/null; then\
 fi\
 ' install/config/walker-elephant.sh
 
-# Update mise activation to support both bash and fish
-sed -i 's/omarchy-cmd-present mise && eval "\$(mise activate bash)"/if [ "\$SHELL" = "\/bin\/bash" ] \&\& command -v mise \&> \/dev\/null; then\n  eval "\$(mise activate bash)"\nelif [ "\$SHELL" = "\/bin\/fish" ] \&\& command -v mise \&> \/dev\/null; then\n  mise activate fish | source\nfi/' config/uwsm/env
+# Add fish integrations (upstream only wires bash): mise and zoxide.
+# Lives in the user's fish config, so it survives upstream changes to uwsm/env.
+FISH_CONF_DIR="$HOME/.config/fish/conf.d"
+mkdir -p "$FISH_CONF_DIR"
+cat > "$FISH_CONF_DIR/omarchy-on-cachyos.fish" <<'EOF'
+# Added by omarchy-on-cachyos
+if status is-interactive
+    command -q mise; and mise activate fish | source
+    command -q zoxide; and zoxide init fish | source
+end
+EOF
 
 # Copy omarchy installation files to ~/.local/share/omarchy
 mkdir -p ~/.local/share/omarchy
@@ -169,10 +167,10 @@ echo " 3. Disabled further Omarchy changes to pacman.conf, preserving CachyOS se
 echo " 4. Replaced nvidia.sh to respect existing CachyOS NVIDIA drivers (only installs if none present)."
 echo " 5. Removed plymouth.sh from install.sh to avoid conflict with CachyOS login display manager installation."
 echo " 6. Removed limine-snapper.sh from install.sh to avoid conflict with CachyOS boot loader installation."
-echo " 7. Removed alt-bootloaders.sh from install.sh to avoid conflict with CachyOS boot loader installation."
-echo " 8. Removed /etc/sddm.conf to avoid conflict with Omarchy UWSM session autologin."
-echo " 9. Disabled wpa_supplicant and configured NetworkManager to use iwd backend."
-echo "10. Pinned walker to omarchy repo to prevent CachyOS version conflict."
+echo " 7. Removed /etc/sddm.conf to avoid conflict with Omarchy UWSM session autologin."
+echo " 8. Disabled wpa_supplicant and configured NetworkManager to use iwd backend."
+echo " 9. Pinned walker to omarchy repo to prevent CachyOS version conflict."
+echo "10. Added mise and zoxide integration for the fish shell."
 echo ""
 echo "IMPORTANT: If you installed CachyOS without a deskop environment, you will not have a display manager installed." 
 echo "If this is the case, you will need to run the following command after this installation script is complete:"
