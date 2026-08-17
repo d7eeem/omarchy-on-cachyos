@@ -103,6 +103,10 @@ echo "Making adjustments to Omarchy install scripts to support CachyOS..."
 # Navigate to Omarchy install scripts
 cd "$OMARCHY_DIR"
 
+# Omarchy v4.0.0+ removed install.sh entirely (package/ISO-based install
+# architecture), which this repo's clone-and-patch approach cannot support.
+test -f install.sh || { echo "Error: this Omarchy version has no install.sh (v4+ changed its install architecture and is not supported yet). Re-run and select the tested v3.8.4 release." >&2; exit 1; }
+
 # Remove tldr installation to prevent conflict with tealdeer install.
 patch_or_die install/omarchy-base.packages '^tldr$' '/^tldr$/d'
 

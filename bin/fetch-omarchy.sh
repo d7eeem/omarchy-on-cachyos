@@ -2,7 +2,7 @@
 
 # The Omarchy version this repo's CachyOS patches are tested against.
 # Update when re-verifying the patch set (see plans/003).
-TESTED_OMARCHY_REF="v4.0.0"
+TESTED_OMARCHY_REF="v3.8.4"
 
 # Target destination (relative to this script's location)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -37,14 +37,28 @@ fi
 # Formulate arguments based on selection
 if [ "$CHOICE" -eq 1 ] || [ -z "$CHOICE" ]; then
     BRANCH_ARGS=""
+    SELECTED_TAG=""
     echo "Cloning bleeding-edge dev tree..."
-    echo "Note: CachyOS patches are tested against $TESTED_OMARCHY_REF; other versions are verified at patch time and will abort on mismatch."
 else
     SELECTED_TAG="${RELEASES[$((CHOICE-2))]}"
     BRANCH_ARGS="-b $SELECTED_TAG"
     echo "Cloning stable version: $SELECTED_TAG..."
-    if [ "$SELECTED_TAG" != "$TESTED_OMARCHY_REF" ]; then
-        echo "Note: CachyOS patches are tested against $TESTED_OMARCHY_REF; other versions are verified at patch time and will abort on mismatch."
+fi
+
+# The safe path is the tested version. Anything else (bleeding edge, or a
+# stable tag other than TESTED_OMARCHY_REF) requires explicit confirmation:
+# Omarchy v4.0.0+ removed install.sh and switched to a package/ISO-based
+# install architecture that this repo's clone-and-patch approach cannot
+# support, and other versions are only verified at patch time (see
+# patch_or_die in bin/install-omarchy-on-cachyos.sh), not guaranteed to work.
+if [ -z "$SELECTED_TAG" ] || [ "$SELECTED_TAG" != "$TESTED_OMARCHY_REF" ]; then
+    echo ""
+    echo "Warning: Omarchy v4.0.0+ removed install.sh and is not supported by this installer."
+    echo "CachyOS patches are tested against $TESTED_OMARCHY_REF; other versions are verified at patch time and will abort on mismatch, but are not guaranteed to work end-to-end."
+    read -r -p "Continue with untested version anyway? [y/N]: " GOAHEAD
+    if [[ ! "${GOAHEAD,,}" =~ ^(y|yes)$ ]]; then
+        echo "Aborting. Re-run and select the tested version ($TESTED_OMARCHY_REF) to proceed."
+        exit 1
     fi
 fi
 
