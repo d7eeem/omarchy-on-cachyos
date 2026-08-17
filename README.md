@@ -23,7 +23,7 @@ This script does not:
  1) Install CachyOS or any other Linux operating system
  2) Partition, format, or encrypt hard disks
  3) Install or configure a boot loader
- 5) Install or configure a login display manager
+ 5) Install a display manager package (SDDM must already be present — see §4.3 — before this script's Omarchy install step configures it further)
 
 All of the above need to be done when you install CachyOS. 
 
@@ -41,7 +41,7 @@ The philosophy behind this script is to produce a strong and stable blend of Cac
 
 4. Mise and zoxide: Omarchy only wires up Mise activation for Bash, and only installs zoxide (a base package) without initializing it for any shell but Bash. This script activates both for the Fish shell by writing `~/.config/fish/conf.d/omarchy-on-cachyos.fish`, which survives upstream changes to Omarchy's own activation scripts.
 
-5. Login System: As a distribution, Omarchy skips installation of a login display manager. Instead, Hyprland autostarts and password protection is provided upon boot by the LUKS full disk encryption service. This script, however, assumes a display manager is installed. (Note: this script does not install a display manager, but also does not configure Hyprland to start automatically if a display manager is not installed.)
+5. Login System: Omarchy's installer (`install/login/sddm.sh`) does configure SDDM: it installs an Omarchy SDDM theme, writes `/etc/sddm.conf.d/10-wayland.conf` and `/etc/sddm.conf.d/autologin.conf` (Wayland plus autologin as your user into the `omarchy` UWSM session), trims the gnome-keyring lines from `/etc/pam.d/sddm`, and runs `systemctl enable sddm.service`. This script runs that step unmodified — it does not install the SDDM package itself, but CachyOS's Hyprland Desktop Environment option does (see §4.3), so SDDM is already present and enabled by the time Omarchy's installer runs. Because `/etc/sddm.conf` takes precedence over every file in `/etc/sddm.conf.d/` (see `man 5 sddm.conf`), this script deletes any pre-existing `/etc/sddm.conf` before running Omarchy's installer, so Omarchy's drop-ins are the ones that actually take effect rather than being silently overridden. Testing found no CachyOS-owned files under `/etc/sddm.conf.d/` on a stock CachyOS Hyprland install, so there is nothing there for Omarchy's drop-ins to conflict with.
 
 6. Full Disk Encryption: As a distribution, Omarchy automatically turns on full disk encryption via LUKS. This script, however, leaves this decision up to the user. CachyOS can be installed with or without full disk encryption, and this script will install Omarchy on either setup.
 
@@ -55,7 +55,7 @@ IMPORTANT: This script does not install CachyOS. You must do that separately (an
 
 2. Shell: You must choose Fish as the default shell for this installation script to work properly. (This is the default CachyOS shell choice.)
 
-3. Desktop Environment to Install: You can install a minimal system with no desktop environment or you can choose to install the CachyOS Hyprland Desktop Environment. If you have CachyOS install Hyprland, it will also install SDDM as the login display manager by default. Do not install GNOME or KDE.
+3. Desktop Environment to Install: You can install a minimal system with no desktop environment or you can choose to install the CachyOS Hyprland Desktop Environment. If you have CachyOS install Hyprland, it will also install SDDM as the login display manager by default. Do not install GNOME or KDE. Omarchy's own installer later reconfigures this SDDM install for Wayland and autologin into its `omarchy` session (see §3.5); this script clears any pre-existing `/etc/sddm.conf` first so that reconfiguration takes effect cleanly.
 
 4. Graphics Drivers: 
 
