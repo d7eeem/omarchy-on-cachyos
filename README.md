@@ -16,6 +16,8 @@ This installation script does the following three things:
   3) Launches the installation of Omarchy on an already setup CachyOS system
   4) Installs and configures NVIDIA 580xx proprietary drivers
 
+The CachyOS patches this script applies are tested against the version pinned as `TESTED_OMARCHY_REF` in `bin/fetch-omarchy.sh` (currently `v3.8.4`). Selecting any other version prompts for explicit confirmation, and every patch is verified against the actual file contents at patch time; if a pattern doesn't match, the installer aborts loudly instead of half-applying. Omarchy v4.0.0+ changed its install architecture (no `install.sh`; it installs via Arch packages from an ISO/chroot instead) and is not yet supported by this project.
+
 This script does not:
 
  1) Install CachyOS or any other Linux operating system
@@ -37,7 +39,7 @@ The philosophy behind this script is to produce a strong and stable blend of Cac
 
 3. TLDR implementation: CachyOS installs Tealdeer by default, which is a TLDR implementation written in Rust. This script will preserve use of Tealdeer.
 
-4. Mise: Omarchy will setup Mise to run automatically via mise-activate. This script will supply the right mise-activate command for the fish shell.
+4. Mise and zoxide: Omarchy only wires up Mise activation for Bash, and only installs zoxide (a base package) without initializing it for any shell but Bash. This script activates both for the Fish shell by writing `~/.config/fish/conf.d/omarchy-on-cachyos.fish`, which survives upstream changes to Omarchy's own activation scripts.
 
 5. Login System: As a distribution, Omarchy skips installation of a login display manager. Instead, Hyprland autostarts and password protection is provided upon boot by the LUKS full disk encryption service. This script, however, assumes a display manager is installed. (Note: this script does not install a display manager, but also does not configure Hyprland to start automatically if a display manager is not installed.)
 
