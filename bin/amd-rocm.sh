@@ -11,34 +11,27 @@ fi
 
 echo "[*] Found AMD GPU ID: $GPU_ID"
 
-# 2. Remove conflicting packages
-echo "[*] Removing conflicting NVIDIA packages..."
-sudo pacman -Rdd --noconfirm libxnvctrl linux-cachyos-nvidia-open linux-cachyos-lts-nvidia-open nvidia-open-dkms 2>/dev/null || true
+# 2. Leftover NVIDIA packages are inert on an AMD-only machine; forced
+# removal risks breaking hybrid AMD+NVIDIA systems, and chwd's amd profile
+# needs no removals (see plan 007).
 
 # 3. Install AMD driver profile via chwd
 echo "[*] Installing AMD AMDGPU driver profile..."
 sudo chwd -i amd
 
-# 4. Install ROCm stack
-echo "[*] Installing ROCm packages..."
-sudo pacman -S --needed --noconfirm rocm-core rocm-hip-runtime rocm-hip-sdk rocm-smi rocm-libs libva-mesa-driver libva-vdpau-driver
+# 4. Install ROCm runtime + VA-API utils
+echo "[*] Installing ROCm and VA-API packages..."
+sudo pacman -S --needed --noconfirm rocm-core rocm-hip-runtime rocm-smi-lib libva-utils
 
-# 5. Install VA-API utils
-sudo pacman -S --needed --noconfirm libva-utils
-
-# 6. Add AMD ROCm environment variables for UWSM
+# 5. Add AMD ROCm environment variables for UWSM
 mkdir -p "$HOME/.config/uwsm"
 if ! grep -q '^# AMD ROCm$' "$HOME/.config/uwsm/env" 2>/dev/null; then
     cat >>"$HOME/.config/uwsm/env" <<'EOF'
 
 # AMD ROCm
 export LIBVA_DRIVER_NAME=radeonsi
-export GBM_BACKEND=radeonsi
-export HIP_VISIBLE_DEVICES=0
 export ROCM_HOME=/opt/rocm
 export PATH=$ROCM_HOME/bin:$PATH
-export LD_LIBRARY_PATH=$ROCM_HOME/lib:$LD_LIBRARY_PATH
-export VDPAU_DRIVER=radeonsi
 EOF
     echo "[*] AMD ROCm environment variables written to ~/.config/uwsm/env"
 else
