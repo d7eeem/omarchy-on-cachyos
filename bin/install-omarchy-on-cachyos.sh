@@ -72,7 +72,7 @@ sudo pacman-key --lsign-key F0134EE680CAC571
 
 # Add omarchy repository to pacman.conf (skip if already present)
 if ! grep -q '^\[omarchy\]' /etc/pacman.conf; then
-    echo -e "\n[omarchy]\nSigLevel = Optional TrustedOnly\nServer = https://pkgs.omarchy.org/\$arch" | sudo tee -a /etc/pacman.conf > /dev/null
+    echo -e "\n[omarchy]\nSigLevel = Required DatabaseOptional\nServer = https://pkgs.omarchy.org/\$arch" | sudo tee -a /etc/pacman.conf > /dev/null
 else
     echo "Omarchy repository already present in pacman.conf, skipping."
 fi
