@@ -1,7 +1,6 @@
 # omarchy-on-cachyos
 
-- UPDATE 20-May-2026: The install script now includes interactive version selection for choosing between Stable releases and Bleeding Edge.
-- UPDATE 1-October-2025: The install script has been updated to support Omarchy 3.0+ out of the box.
+- UPDATE 17-August-2026: Interactive version selection with a tested-and-verified default (currently v3.8.4); see §2.
 
 ## 1. Introduction
 
@@ -9,7 +8,7 @@ This project provides an installation script for implementing DHH's Omarchy conf
 
 ## 2. What This Script Does and Does Not Do
 
-This installation script does the following three things:
+This installation script does the following:
 
   1) Prompts for and fetches your preferred version of Omarchy (Stable tags or Bleeding Edge)
   2) Makes adjustments to the Omarchy install scripts to support installation on CachyOS
@@ -18,12 +17,14 @@ This installation script does the following three things:
 
 The CachyOS patches this script applies are tested against the version pinned as `TESTED_OMARCHY_REF` in `bin/fetch-omarchy.sh` (currently `v3.8.4`). Selecting any other version prompts for explicit confirmation, and every patch is verified against the actual file contents at patch time; if a pattern doesn't match, the installer aborts loudly instead of half-applying. Omarchy v4.0.0+ changed its install architecture (no `install.sh`; it installs via Arch packages from an ISO/chroot instead) and is not yet supported by this project.
 
+Note on updates: do not use Omarchy's built-in `omarchy-update` after installing via this script — the pinned checkout makes it fail immediately with a git error (harmless: it changes nothing, and your CachyOS patches are untouched). To update, re-run this installer when a newer tested version is available.
+
 This script does not:
 
  1) Install CachyOS or any other Linux operating system
  2) Partition, format, or encrypt hard disks
  3) Install or configure a boot loader
- 5) Install a display manager package (SDDM must already be present — see §4.3 — before this script's Omarchy install step configures it further)
+ 4) Install a display manager package (SDDM must already be present — see §4.3 — before this script's Omarchy install step configures it further)
 
 All of the above need to be done when you install CachyOS. 
 
@@ -57,9 +58,7 @@ IMPORTANT: This script does not install CachyOS. You must do that separately (an
 
 3. Desktop Environment to Install: You can install a minimal system with no desktop environment or you can choose to install the CachyOS Hyprland Desktop Environment. If you have CachyOS install Hyprland, it will also install SDDM as the login display manager by default. Do not install GNOME or KDE. Omarchy's own installer later reconfigures this SDDM install for Wayland and autologin into its `omarchy` session (see §3.5); this script clears any pre-existing `/etc/sddm.conf` first so that reconfiguration takes effect cleanly.
 
-4. Graphics Drivers: 
-
-5. This script detects your GPU vendor (`bin/gpu-detect.sh`) and dispatches setup accordingly (`bin/gpu-setup.sh`). On NVIDIA systems, it detects and respects whatever driver CachyOS already has installed rather than pinning or downgrading to a specific series. On AMD systems, it installs the AMDGPU driver profile via CachyOS `chwd`, plus the ROCm runtime and VA-API packages (`bin/amd-rocm.sh`) — VA-API only, since Mesa dropped VDPAU support upstream. On hybrid NVIDIA+AMD systems, the NVIDIA path wins (see the detection order in `bin/gpu-detect.sh`). Intel-only systems are left untouched by this script.
+4. Graphics Drivers: This script detects your GPU vendor (`bin/gpu-detect.sh`) and dispatches setup accordingly (`bin/gpu-setup.sh`). On NVIDIA systems, it detects and respects whatever driver CachyOS already has installed rather than pinning or downgrading to a specific series. On AMD systems, it installs the AMDGPU driver profile via CachyOS `chwd`, plus the ROCm runtime and VA-API packages (`bin/amd-rocm.sh`) — VA-API only, since Mesa dropped VDPAU support upstream. On hybrid NVIDIA+AMD systems, the NVIDIA path wins (see the detection order in `bin/gpu-detect.sh`). Intel-only systems are left untouched by this script.
 
    **Important (NVIDIA users):** 
 
