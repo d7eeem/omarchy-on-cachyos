@@ -37,9 +37,7 @@ if ! command -v yay &> /dev/null; then
 
     # Clone and build yay
     git clone https://aur.archlinux.org/yay.git /tmp/yay
-    cd /tmp/yay
-    makepkg -si --noconfirm
-    cd -
+    (cd /tmp/yay && makepkg -si --noconfirm)
 
     # Clean up
     rm -rf /tmp/yay
