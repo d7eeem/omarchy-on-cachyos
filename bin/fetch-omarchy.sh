@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# The Omarchy version this repo's CachyOS patches are tested against.
+# Update when re-verifying the patch set (see plans/003).
+TESTED_OMARCHY_REF="v4.0.0"
+
 # Target destination (relative to this script's location)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TARGET_DIR="${OMARCHY_DIR:-$(dirname "$SCRIPT_DIR")/omarchy}"
@@ -16,7 +20,11 @@ echo "1) Bleeding Edge (dev/main branch - Unstable)"
 
 # Dynamically list the stable versions fetched from the repository
 for i in "${!RELEASES[@]}"; do
-    echo "$((i+2))) Stable Release (${RELEASES[i]})"
+    if [ "${RELEASES[i]}" = "$TESTED_OMARCHY_REF" ]; then
+        echo "$((i+2))) Stable Release (${RELEASES[i]}) (tested)"
+    else
+        echo "$((i+2))) Stable Release (${RELEASES[i]})"
+    fi
 done
 
 read -r -p "Enter your choice (1-$(( ${#RELEASES[@]} + 1 ))): " CHOICE
@@ -30,10 +38,14 @@ fi
 if [ "$CHOICE" -eq 1 ] || [ -z "$CHOICE" ]; then
     BRANCH_ARGS=""
     echo "Cloning bleeding-edge dev tree..."
+    echo "Note: CachyOS patches are tested against $TESTED_OMARCHY_REF; other versions are verified at patch time and will abort on mismatch."
 else
     SELECTED_TAG="${RELEASES[$((CHOICE-2))]}"
-    BRANCH_ARGS="--depth 1 -b $SELECTED_TAG"
+    BRANCH_ARGS="-b $SELECTED_TAG"
     echo "Cloning stable version: $SELECTED_TAG..."
+    if [ "$SELECTED_TAG" != "$TESTED_OMARCHY_REF" ]; then
+        echo "Note: CachyOS patches are tested against $TESTED_OMARCHY_REF; other versions are verified at patch time and will abort on mismatch."
+    fi
 fi
 
 # Ensure target directory is clean before git cloning to prevent fatal conflicts
