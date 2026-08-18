@@ -7,7 +7,7 @@ on:
 
 jobs:
   shellcheck:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, docker]
     steps:
       - uses: actions/checkout@v4
       - name: Bash syntax check
@@ -18,7 +18,6 @@ jobs:
             echo "OK: $f"
           done
       - name: ShellCheck
-        uses: ludeeus/action-shellcheck@2.0.0
-        with:
-          scandir: ./bin
-          severity: error
+        # shellcheck is baked into the self-hosted runner image; a container
+        # action would need host<->runner workspace path mapping to work here.
+        run: shellcheck --severity=error bin/*.sh
