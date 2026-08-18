@@ -31,6 +31,8 @@ re-verification steps; run them.
 | 009 | Pacman SigLevel hardening for omarchy repo | P3 | S | after 002/003 (same file) | DONE (sonnet, approved, landed at 41a5032; `Required DatabaseOptional` — pkgs signed, db not; upstream v3.8.4 itself ships weaker `Optional TrustAll`) |
 | 010 | README/typos/duplicate-funding cleanup | P3 | S | after 003, 005, 006, 009 | DONE (sonnet, approved, landed at dd40990; lint.yml severity tighten deferred — shellcheck unavailable locally) |
 
+| 012 | Quattro (v4) install support — package wrapper + CachyOS reconciliation | P1 | M–L | 011 (design), maintainer sign-off ("bump to install omarchy quattro", 2026-08-18) | DONE (sonnet, approved, landed at 7650b9b; dry-run verified on live CachyOS; REAL-HARDWARE VM VALIDATION STILL REQUIRED before announcing) |
+
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) |
 REJECTED (with one-line rationale)
 
