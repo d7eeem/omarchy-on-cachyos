@@ -158,6 +158,11 @@ reviewed and pinned, verifying its sha256 checksum before running it — so an
 unreviewed change upstream is refused rather than executed silently. You can
 also run it standalone anytime with `bin/debloat.sh`.
 
+One caveat: a-la-carchy itself offers to install an Omarchy menu shortcut
+that re-launches it from its upstream master branch. Launches via that
+shortcut are NOT covered by this repo's pin/checksum — if you enable it, you
+are trusting upstream directly; prefer re-running `bin/debloat.sh` instead.
+
 **Omarchy 4 (Quattro) users:** a-la-carchy targets Omarchy v3's waybar/walker
 stack and is not wired into the Quattro install path. Use Omarchy's built-in
 `omarchy-remove-preinstalls` instead.
