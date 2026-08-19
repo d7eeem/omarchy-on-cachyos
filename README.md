@@ -67,7 +67,7 @@ reconciles everything in that process that would otherwise clobber CachyOS
 state.
 
 ```bash
-git clone https://github.com/mroboff/omarchy-on-cachyos.git
+git clone https://github.com/d7eeem/omarchy-on-cachyos.git
 cd omarchy-on-cachyos
 bin/install-omarchy-quattro.sh --dry-run   # review the exact plan first
 bin/install-omarchy-quattro.sh             # then run it for real
@@ -145,7 +145,7 @@ clones `basecamp/omarchy` at a chosen version, patches its install scripts
 for CachyOS, and runs Omarchy's own `install.sh`.
 
 ```bash
-git clone https://github.com/mroboff/omarchy-on-cachyos.git
+git clone https://github.com/d7eeem/omarchy-on-cachyos.git
 cd omarchy-on-cachyos/bin
 chmod +x install-omarchy-on-cachyos.sh
 ./install-omarchy-on-cachyos.sh
