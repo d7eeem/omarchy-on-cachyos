@@ -33,6 +33,8 @@ re-verification steps; run them.
 
 | 012 | Quattro (v4) install support — package wrapper + CachyOS reconciliation | P1 | M–L | 011 (design), maintainer sign-off ("bump to install omarchy quattro", 2026-08-18) | DONE (sonnet, approved, landed at 7650b9b; dry-run verified on live CachyOS; REAL-HARDWARE VM VALIDATION STILL REQUIRED before announcing) |
 
+| 013 | a-la-carchy debloater integration (opt-in, pinned launcher, v3 path only) | P2 | S–M | none | DONE (sonnet, 1 revise round, landed at baeffd9; pin f6a02bf + sha256 verified; tamper + decline paths tested; caveat: a-la-carchy's own menu-shortcut feature bypasses the pin — documented in README) |
+
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) |
 REJECTED (with one-line rationale)
 
