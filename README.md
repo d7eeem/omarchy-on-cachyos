@@ -141,13 +141,34 @@ chmod +x install-omarchy-on-cachyos.sh
 
 **Note:** Please review the script contents before running to understand what changes will be made to your system.
 
-## 7. Statement of Lack of Warranty
+## 7. Optional: Debloating (a-la-carchy)
+
+Omarchy ships a large default app selection. [a-la-carchy](https://github.com/DanielCoffey1/a-la-carchy)
+(by [Daniel Coffey](https://github.com/DanielCoffey1)) is a community
+interactive TUI for removing default apps and webapps you don't want, with
+per-item selection and confirmation prompts, plus some theme/keybind/monitor
+tweaks.
+
+a-la-carchy is third-party and has no LICENSE file in its repository, so this
+repo does not bundle or vendor it. Instead, `bin/install-omarchy-on-cachyos.sh`
+offers to launch it at the end of installation via `bin/debloat.sh`, which
+fetches the script the same way upstream's own README instructs
+(`bash <(curl -fsSL .../a-la-carchy.sh)`) but from a commit this repo has
+reviewed and pinned, verifying its sha256 checksum before running it — so an
+unreviewed change upstream is refused rather than executed silently. You can
+also run it standalone anytime with `bin/debloat.sh`.
+
+**Omarchy 4 (Quattro) users:** a-la-carchy targets Omarchy v3's waybar/walker
+stack and is not wired into the Quattro install path. Use Omarchy's built-in
+`omarchy-remove-preinstalls` instead.
+
+## 8. Statement of Lack of Warranty
 
 THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 Use this script at your own risk. Always backup your system and important data before running installation scripts.
 
-## 8. How to Contribute
+## 9. How to Contribute
 
 We welcome contributions to improve this project! Here's how you can help:
 

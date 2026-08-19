@@ -212,6 +212,16 @@ echo ""
 echo "Press Enter to begin the installation of Omarchy..."
 read -r
 
-# Run the modified install.sh script 
+# Run the modified install.sh script
 chmod +x install.sh
 ./install.sh
+
+# Optional: offer the a-la-carchy debloater (third-party, interactive,
+# pinned + checksum-verified by bin/debloat.sh). v3 installs only.
+echo ""
+echo "Optional: a-la-carchy is a community TUI for removing Omarchy default"
+echo "apps and webapps you don't want (per-item selection, confirmations)."
+read -r -p "Run the a-la-carchy debloater now? [y/N] " DEBLOAT_REPLY
+if [[ $DEBLOAT_REPLY =~ ^[Yy]$ ]]; then
+    bash "$SCRIPT_DIR/debloat.sh" || echo "Debloater did not complete — you can run bin/debloat.sh anytime."
+fi
