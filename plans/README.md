@@ -35,6 +35,8 @@ re-verification steps; run them.
 
 | 013 | a-la-carchy debloater integration (opt-in, pinned launcher, v3 path only) | P2 | S–M | none | DONE (sonnet, 1 revise round, landed at baeffd9; pin f6a02bf + sha256 verified; tamper + decline paths tested; caveat: a-la-carchy's own menu-shortcut feature bypasses the pin — documented in README) |
 
+| 014 | Quattro per-item debloat picker (`bin/debloat-quattro.sh`, MIT-derived from upstream) | P2 | M | 012 | DONE (sonnet, approved, landed at fc35e98; mock-verified incl. live package intersection; real-TUI run on a v4 machine = same release gate as 012) |
+
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) |
 REJECTED (with one-line rationale)
 
