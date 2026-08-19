@@ -4,13 +4,14 @@ Install [DHH's Omarchy](https://omarchy.org) — an opinionated, Hyprland-based
 desktop — on top of [CachyOS](https://cachyos.org), a performance-optimized
 Arch Linux distribution, without either one clobbering the other.
 
-The project provides two installation paths plus an optional debloater:
+The project provides two installation paths plus optional debloaters:
 
 | Path | Script | Status |
 |------|--------|--------|
 | **Omarchy 4 "Quattro"** (packages) | `bin/install-omarchy-quattro.sh` | **Recommended** |
 | Omarchy 3 (clone-and-patch) | `bin/install-omarchy-on-cachyos.sh` | Legacy, maintained |
-| Optional debloater (a-la-carchy) | `bin/debloat.sh` | Opt-in, v3 only |
+| Optional debloater: per-item picker (Omarchy 4) | `bin/debloat-quattro.sh` | Opt-in, v4 only |
+| Optional debloater: a-la-carchy (Omarchy 3) | `bin/debloat.sh` | Opt-in, v3 only |
 
 This README assumes an experienced Arch user — comfortable with the shell and
 with Arch terms like AUR.
@@ -258,9 +259,43 @@ For full hardware acceleration in **Firefox**:
    user_pref("gfx.x11-egl.force-enabled", true);
    ```
 
-## 7. Optional: Debloating with a-la-carchy (v3 only)
+## 7. Optional: Debloating
 
-Omarchy ships a large default app selection.
+Omarchy ships a large default app selection. This project offers an optional
+debloater for each install path — pick the one matching your version.
+
+### Omarchy 4: per-item picker (`bin/debloat-quattro.sh`)
+
+Omarchy 4's built-in `omarchy-remove-preinstalls` is all-or-nothing: one
+confirm removes every preinstalled web app, every TUI wrapper, all
+agent/mise CLI stubs, and a fixed package list in one shot.
+`bin/debloat-quattro.sh` is a per-item alternative — it enumerates the same
+candidates (packages, web apps, TUIs, agent CLI stubs) and lets you pick
+exactly which ones to remove via a `gum` checklist, one category at a time.
+
+It is derived from `basecamp/omarchy`'s own scripts
+(`omarchy-remove-preinstalls` and the `omarchy-webapp-remove-all` /
+`omarchy-tui-remove-all` enumeration logic), which are MIT-licensed, with
+attribution in the script header. Actual removal is delegated to Omarchy's
+own tools (`omarchy-pkg-drop`, `omarchy-webapp-remove`, `omarchy-tui-remove`)
+so behavior tracks upstream rather than reimplementing it.
+
+Because Omarchy's `preinstalls-removed` state flag is binary (it doesn't
+represent partial removal), the script only sets it if you select
+*everything* offered across every category; otherwise it leaves the flag
+unset and tells you so, since some Hyprland keybindings/menu entries may
+still expect the untouched items.
+
+```bash
+bin/debloat-quattro.sh --dry-run   # review what would be removed first
+bin/debloat-quattro.sh             # then run it for real
+```
+
+To restore everything at any time, run Omarchy's own
+`omarchy-install-preinstalls`.
+
+### Omarchy 3: a-la-carchy (`bin/debloat.sh`)
+
 [a-la-carchy](https://github.com/DanielCoffey1/a-la-carchy) (by
 [Daniel Coffey](https://github.com/DanielCoffey1)) is a community
 interactive TUI for removing default apps and webapps you don't want, with
@@ -281,8 +316,9 @@ shortcut are NOT covered by this repo's pin/checksum — if you enable it, you
 are trusting upstream directly; prefer re-running `bin/debloat.sh` instead.
 
 **Omarchy 4 (Quattro) users:** a-la-carchy targets Omarchy v3's
-waybar/walker stack and is not wired into the Quattro path. Use Omarchy's
-built-in `omarchy-remove-preinstalls` instead.
+waybar/walker stack and is not wired into the Quattro path. Use
+`bin/debloat-quattro.sh` (above) for per-item choice, or Omarchy's built-in
+`omarchy-remove-preinstalls` if you want to remove everything at once.
 
 ## 8. Statement of Lack of Warranty
 
