@@ -465,6 +465,7 @@ if $DRY_RUN; then
     assert "effective mkinitcpio HOOKS still contain the pre-install encrypt hook (if LUKS) and zz-cachyos-keep-hooks.conf exists" true
     assert "non-limine machine has limine-snapper-sync.service disabled" true
     assert "sddm enabled; NetworkManager enabled" true
+    assert "/etc/sddm.conf absent (sddm.conf.d drop-ins take effect)" true
     assert "/etc/snapper/configs/root matches the pre-install backup" true
     assert "the v4 CLI entrypoint (omarchy) is present" true
 else
@@ -505,6 +506,13 @@ else
     systemctl is-enabled --quiet sddm.service 2>/dev/null || sddm_nm_ok=false
     systemctl is-enabled --quiet NetworkManager.service 2>/dev/null || sddm_nm_ok=false
     assert "sddm enabled; NetworkManager enabled" "$sddm_nm_ok"
+
+    # A fresh CachyOS install (or any tool) may recreate /etc/sddm.conf after
+    # the pre-install removal above; it silently outranks every sddm.conf.d
+    # drop-in, so its absence is part of the contract, not just a setup step.
+    sddm_conf_ok=true
+    [[ -f /etc/sddm.conf ]] && sddm_conf_ok=false
+    assert "/etc/sddm.conf absent (sddm.conf.d drop-ins take effect)" "$sddm_conf_ok"
 
     snapper_ok=true
     if [[ -f $SNAPPER_BACKUP ]]; then
