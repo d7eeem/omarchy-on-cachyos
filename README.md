@@ -1,4 +1,4 @@
-# omarchy-on-cachyos
+# omocachy
 
 Install [DHH's Omarchy](https://omarchy.org) — an opinionated, Hyprland-based
 desktop — on top of [CachyOS](https://cachyos.org), a performance-optimized
@@ -66,8 +66,8 @@ reconciles everything in that process that would otherwise clobber CachyOS
 state.
 
 ```bash
-git clone https://github.com/d7eeem/omarchy-on-cachyos.git
-cd omarchy-on-cachyos
+git clone https://github.com/d7eeem/omocachy.git
+cd omocachy
 bin/install-omarchy-quattro.sh --dry-run   # review the exact plan first
 bin/install-omarchy-quattro.sh             # then run it for real
 ```
@@ -150,7 +150,7 @@ actually conflict, resolved as follows:
    Omarchy's `tldr` package is excluded to avoid the file conflict.
 3. **Mise and zoxide on Fish**: Omarchy wires mise activation only for Bash
    and installs zoxide without initializing it for Fish. The installer
-   write `~/.config/fish/conf.d/omarchy-on-cachyos.fish` activating both —
+   write `~/.config/fish/conf.d/omocachy.fish` activating both —
    a file that survives upstream changes to Omarchy's own activation
    scripts.
 4. **Login system (SDDM)**: CachyOS's Hyprland option provides the SDDM

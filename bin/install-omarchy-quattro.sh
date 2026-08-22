@@ -357,13 +357,13 @@ fi
 # Fish integrations (mise + zoxide): Omarchy only wires these for Bash. Lives
 # in the user's fish config so it survives upstream changes.
 FISH_CONF_DIR="$HOME/.config/fish/conf.d"
-FISH_CONF_FILE="$FISH_CONF_DIR/omarchy-on-cachyos.fish"
+FISH_CONF_FILE="$FISH_CONF_DIR/omocachy.fish"
 if $DRY_RUN; then
     echo "DRYRUN: write $FISH_CONF_FILE"
 else
     mkdir -p "$FISH_CONF_DIR"
     cat >"$FISH_CONF_FILE" <<'EOF'
-# Added by omarchy-on-cachyos
+# Added by omocachy
 if status is-interactive
     command -q mise; and mise activate fish | source
     command -q zoxide; and zoxide init fish | source
@@ -422,7 +422,7 @@ else
             [[ -z $hf ]] && continue
             base="$(basename "$hf")"
             override="/etc/pacman.d/hooks/$base"
-            printf '[Trigger]\nType = Path\nOperation = Install\nOperation = Upgrade\nOperation = Remove\nTarget = var/lib/omarchy-on-cachyos/never-matches\n\n[Action]\nDescription = Disabled by omarchy-on-cachyos (non-limine bootloader)\nWhen = PostTransaction\nExec = /usr/bin/true\n' |
+            printf '[Trigger]\nType = Path\nOperation = Install\nOperation = Upgrade\nOperation = Remove\nTarget = var/lib/omocachy/never-matches\n\n[Action]\nDescription = Disabled by omocachy (non-limine bootloader)\nWhen = PostTransaction\nExec = /usr/bin/true\n' |
                 write_root_file "$override"
             echo "Overrode $hf with a no-op at $override"
         done <<<"$hook_files"

@@ -1,14 +1,14 @@
-# Handoff — omarchy-on-cachyos
+# Handoff — omocachy
 
 Orientation for whoever (human or agent) picks this project up next.
-Updated 2026-08-22 at commit `253067e`. User-facing docs live in
+Updated 2026-08-22. User-facing docs live in
 `README.md`; the full engineering record lives in `plans/` — this file is
 the map between them.
 
 ## What this repo is now
 
 A standalone project (fork of `mroboff/omarchy-on-cachyos`, **not**
-PR-bound — clone URLs point at `d7eeem/`; `FUNDING.yml` deliberately still
+PR-bound — clone URLs point at `d7eeem/omocachy`; `FUNDING.yml` deliberately still
 credits the original author). It installs Omarchy 4 on CachyOS with a
 per-item debloater:
 
@@ -69,7 +69,7 @@ maintenance isolated there and do not reintroduce those scripts to `main`.
 root-equivalent; secrets in `.env`, unrecoverable, never commit or print):
 
 - 3 ephemeral GitHub Actions runners (`d7eeem/feather`,
-  `d7eeem/omarchy-on-cachyos`, `d7eeem/garage-webui-ng`). Note: this repo's
+  `d7eeem/omocachy`, `d7eeem/garage-webui-ng`). Note: this repo's
   Actions workflow was **removed** in favor of Jenkins, so `runner-omarchy`
   currently serves nothing — keep or retire deliberately.
 - 1 Jenkins inbound agent (`docker-host` → `http://10.10.10.62:8080`,
