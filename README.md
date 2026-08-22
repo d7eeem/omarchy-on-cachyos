@@ -272,6 +272,9 @@ agent/mise CLI stubs, and a fixed package list in one shot.
 `bin/debloat-quattro.sh` is a per-item alternative — it enumerates the same
 candidates (packages, web apps, TUIs, agent CLI stubs) and lets you pick
 exactly which ones to remove via a `gum` checklist, one category at a time.
+Agent CLI stubs are selectable individually. When a selected app, web app, or
+TUI has a matching Hyprland binding, the picker can also remove that binding
+after the selected removals succeed; it makes a backup first.
 
 It is derived from `basecamp/omarchy`'s own scripts
 (`omarchy-remove-preinstalls` and the `omarchy-webapp-remove-all` /
