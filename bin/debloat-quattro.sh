@@ -16,7 +16,7 @@ set -euo pipefail
 #   DQ_BINDINGS_FILE  — override the Hyprland bindings file used for cleanup
 # When any of these are set and the mode is --list or --dry-run, the Omarchy-4
 # guard below is relaxed so the enumeration/parsing logic can be exercised on a
-# non-Quattro (e.g. v3 development) machine without a real Omarchy 4 install.
+# non-Quattro development machine without a real Omarchy 4 install.
 
 # Fallback snapshots, used only if parsing the installed omarchy-remove-preinstalls
 # yields nothing (e.g. upstream reshuffles its script format).
@@ -76,7 +76,7 @@ if [[ "$guard_ok" -eq 0 ]]; then
     if [[ ( "$MODE" == "list" || "$DRY_RUN" -eq 1 ) && "$test_override_active" -eq 1 ]]; then
         : # test-only relaxation, see comment block above
     else
-        echo "Omarchy 4 not detected — this tool is for Quattro installs (v3 users: see bin/debloat.sh)"
+        echo "Omarchy 4 not detected — this tool is for Quattro installs."
         exit 1
     fi
 fi

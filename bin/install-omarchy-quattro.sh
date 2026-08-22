@@ -1,10 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
-# install-omarchy-quattro.sh — package-install wrapper for Omarchy v4
-# ("Quattro"). Unlike bin/install-omarchy-on-cachyos.sh (which clones and
-# patches Omarchy v3's install.sh), Quattro ships as Arch packages applied by
-# omarchy-apply-system. This script adds the omarchy repo, installs the
+# install-omarchy-quattro.sh — package-install wrapper for Omarchy 4
+# ("Quattro"). Quattro ships as Arch packages applied by omarchy-apply-system.
+# This script adds the omarchy repo, installs the
 # packages, runs the apply stages, and reconciles the parts of that process
 # that would otherwise clobber CachyOS state (pacman.conf, mirrorlist, boot
 # hooks, snapper, user configs), then verifies the result with an assertion
@@ -42,8 +41,7 @@ run_root() {
 
 # Write $2 as the contents of privileged file $1 via sudo tee, or announce the
 # intent and write nothing when dry-running. Content comes from stdin so
-# callers can use a heredoc; that keeps quoting simple and matches how the v3
-# installer writes multi-line config.
+# callers can use a heredoc; that keeps quoting simple for multi-line config.
 write_root_file() {
     local dest="$1"
     if $DRY_RUN; then
@@ -202,7 +200,6 @@ echo "--- Repo + keyring ---"
 
 # Bootstraps trust for the very first transaction that fetches omarchy-keyring
 # itself (the package's own postinstall, if any, takes over from there).
-# Matches bin/install-omarchy-on-cachyos.sh's key handling for continuity.
 run_root pacman-key --recv-keys "$OMARCHY_KEY_ID"
 run_root pacman-key --lsign-key "$OMARCHY_KEY_ID"
 
@@ -358,8 +355,7 @@ else
 fi
 
 # Fish integrations (mise + zoxide): Omarchy only wires these for Bash. Lives
-# in the user's fish config so it survives upstream changes, matching the v3
-# installer's approach.
+# in the user's fish config so it survives upstream changes.
 FISH_CONF_DIR="$HOME/.config/fish/conf.d"
 FISH_CONF_FILE="$FISH_CONF_DIR/omarchy-on-cachyos.fish"
 if $DRY_RUN; then

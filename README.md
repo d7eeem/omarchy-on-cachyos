@@ -4,24 +4,22 @@ Install [DHH's Omarchy](https://omarchy.org) — an opinionated, Hyprland-based
 desktop — on top of [CachyOS](https://cachyos.org), a performance-optimized
 Arch Linux distribution, without either one clobbering the other.
 
-The project provides two installation paths plus optional debloaters:
+The project provides an Omarchy 4 installation path and optional debloater:
 
 | Path | Script | Status |
 |------|--------|--------|
 | **Omarchy 4 "Quattro"** (packages) | `bin/install-omarchy-quattro.sh` | **Recommended** |
-| Omarchy 3 (clone-and-patch) | `bin/install-omarchy-on-cachyos.sh` | Legacy, maintained |
 | Optional debloater: per-item picker (Omarchy 4) | `bin/debloat-quattro.sh` | Opt-in, v4 only |
-| Optional debloater: a-la-carchy (Omarchy 3) | `bin/debloat.sh` | Opt-in, v3 only |
 
 This README assumes an experienced Arch user — comfortable with the shell and
 with Arch terms like AUR.
 
 ## 1. What This Project Does and Does Not Do
 
-Both installers take an **already-installed CachyOS system** and put Omarchy
+The installer takes an **already-installed CachyOS system** and puts Omarchy
 on top of it, resolving the places where the two distributions' defaults
-collide (see §5). They detect your GPU vendor and configure drivers
-accordingly (see §6).
+collide (see §4). It detects your GPU vendor and configures drivers
+accordingly (see §5).
 
 Neither installer:
 
@@ -47,7 +45,7 @@ Install CachyOS before running anything here (see
    display manager). Do not install GNOME or KDE. Omarchy's installer later
    reconfigures SDDM for Wayland and autologin into its `omarchy` session;
    this repo's installers clear any pre-existing `/etc/sddm.conf` first so
-   that reconfiguration actually takes effect (see §5.5).
+   that reconfiguration actually takes effect (see §4.3).
 4. **Full disk encryption**: your choice. Omarchy-the-distribution always
    encrypts; CachyOS makes it optional, and this project works either way.
 5. **Bootloader**: any. Limine gets the most seamless Omarchy 4 integration
@@ -94,8 +92,8 @@ skips the confirmation prompt (safe to combine with `--dry-run`).
    (non-`useradd`-created) user: `omarchy-reinstall-configs` (resyncs
    shipped defaults from `/etc/skel`) then `omarchy-provision-user
    --first-install` (the runtime tweaks `/etc/skel` can't seed).
-5. Writes the Fish integration file (mise + zoxide, see §5.4) and dispatches
-   GPU setup (see §6).
+5. Writes the Fish integration file (mise + zoxide) and dispatches GPU setup
+   (see §5).
 
 **Reconciliation guarantees.** Omarchy's install stages are safe on a stock
 Omarchy machine but destructive on CachyOS if left alone. The wrapper backs
@@ -139,80 +137,37 @@ pre-install LUKS unlock hook when LUKS is in use; `limine-snapper-sync`
 disabled on non-Limine machines; `sddm` and `NetworkManager` enabled; the
 snapper config matches its pre-install backup; and the `omarchy` CLI exists.
 
-## 4. Installing Omarchy 3 — Legacy Clone-and-Patch Path
-
-The original path, still maintained for anyone staying on Omarchy v3. It
-clones `basecamp/omarchy` at a chosen version, patches its install scripts
-for CachyOS, and runs Omarchy's own `install.sh`.
-
-```bash
-git clone https://github.com/d7eeem/omarchy-on-cachyos.git
-cd omarchy-on-cachyos/bin
-chmod +x install-omarchy-on-cachyos.sh
-./install-omarchy-on-cachyos.sh
-```
-
-**Version selection and patch verification.** The installer prompts for an
-Omarchy version (stable tags or bleeding edge). The CachyOS patches are
-tested against the version pinned as `TESTED_OMARCHY_REF` in
-`bin/fetch-omarchy.sh` (currently `v3.8.4`); selecting anything else
-requires explicit confirmation. Every patch is verified against the actual
-file contents at patch time — on any mismatch the installer aborts loudly
-instead of half-applying. Omarchy v4+ trees are refused outright (they have
-no `install.sh`; use §3 instead).
-
-**Updates.** Do not use Omarchy's built-in `omarchy-update` after installing
-via this path — the pinned checkout makes it fail immediately with a git
-error (harmless: it changes nothing, and your CachyOS patches are
-untouched). To update, re-run this installer when a newer tested version is
-available.
-
-**Note:** review the script contents before running to understand what
-changes will be made to your system.
-
-## 5. How CachyOS/Omarchy Conflicts Are Resolved
+## 4. How CachyOS/Omarchy Conflicts Are Resolved
 
 The philosophy of this project is a strong, stable blend of CachyOS and
 Omarchy that changes as little as possible in either. Software and
 configuration are only touched where the two distributions' defaults
 actually conflict, resolved as follows:
 
-1. **AUR helper**: CachyOS ships Paru, Omarchy uses Yay. Yay wins and is
-   installed if missing (v3 path).
-2. **Shell**: CachyOS defaults to Fish, Omarchy to Bash. Fish stays your
+1. **Shell**: CachyOS defaults to Fish, Omarchy to Bash. Fish stays your
    default interactive shell.
-3. **TLDR client**: CachyOS ships Tealdeer (Rust). Tealdeer is preserved;
+2. **TLDR client**: CachyOS ships Tealdeer (Rust). Tealdeer is preserved;
    Omarchy's `tldr` package is excluded to avoid the file conflict.
-4. **Mise and zoxide on Fish**: Omarchy wires mise activation only for Bash
-   and installs zoxide without initializing it for Fish. Both installers
+3. **Mise and zoxide on Fish**: Omarchy wires mise activation only for Bash
+   and installs zoxide without initializing it for Fish. The installer
    write `~/.config/fish/conf.d/omarchy-on-cachyos.fish` activating both —
    a file that survives upstream changes to Omarchy's own activation
    scripts.
-5. **Login system (SDDM)**: CachyOS's Hyprland option provides the SDDM
+4. **Login system (SDDM)**: CachyOS's Hyprland option provides the SDDM
    package itself (§2.3); Omarchy then configures it and runs unmodified.
-   On v3 that's `install/login/sddm.sh` (theme, Wayland, autologin into the
-   `omarchy` UWSM session, PAM keyring trim, `systemctl enable sddm`); on
-   v4 the SDDM config ships as package-owned `/etc/sddm.conf.d/` drop-ins
-   and `sddm.sh` only trims the PAM keyring lines. Because a legacy
+   The SDDM config ships as package-owned `/etc/sddm.conf.d/` drop-ins and
+   `sddm.sh` only trims the PAM keyring lines. Because a legacy
    `/etc/sddm.conf` outranks every file in `/etc/sddm.conf.d/`
-   (`man 5 sddm.conf`), both installers delete any pre-existing
+   (`man 5 sddm.conf`), the installer deletes any pre-existing
    `/etc/sddm.conf` so Omarchy's drop-ins actually take effect. A stock
    CachyOS Hyprland install ships nothing under `/etc/sddm.conf.d/`, so
    there is no conflict there.
-6. **Full disk encryption**: left entirely to your CachyOS install choice
+5. **Full disk encryption**: left entirely to your CachyOS install choice
    (§2.4); everything here works with or without LUKS.
-7. **Networking** (v3 path): CachyOS enables `wpa_supplicant`, which
-   conflicts with Omarchy v3's iwd and produces "connected but no traffic"
-   WiFi. The v3 installer disables wpa_supplicant and points NetworkManager
-   at the iwd backend. (Omarchy 4 switched to NetworkManager itself, so no
-   patch is needed on that path.)
-8. **Walker pin** (v3 path): CachyOS's walker package breaks compatibility
-   with Omarchy v3's elephant; walker is pinned to the omarchy repo via
-   `IgnorePkg`.
 
-## 6. GPU Drivers
+## 5. GPU Drivers
 
-Both paths use the same vendor dispatch (`bin/gpu-detect.sh` →
+The installer uses the same vendor dispatch (`bin/gpu-detect.sh` →
 `bin/gpu-setup.sh`):
 
 - **NVIDIA**: detect and respect whatever NVIDIA driver CachyOS already has
@@ -259,12 +214,12 @@ For full hardware acceleration in **Firefox**:
    user_pref("gfx.x11-egl.force-enabled", true);
    ```
 
-## 7. Optional: Debloating
+## 6. Optional: Debloating
 
 Omarchy ships a large default app selection. This project offers an optional
-debloater for each install path — pick the one matching your version.
+per-item debloater for the Omarchy 4 install path.
 
-### Omarchy 4: per-item picker (`bin/debloat-quattro.sh`)
+### Per-item picker (`bin/debloat-quattro.sh`)
 
 Omarchy 4's built-in `omarchy-remove-preinstalls` is all-or-nothing: one
 confirm removes every preinstalled web app, every TUI wrapper, all
@@ -297,33 +252,7 @@ bin/debloat-quattro.sh             # then run it for real
 To restore everything at any time, run Omarchy's own
 `omarchy-install-preinstalls`.
 
-### Omarchy 3: a-la-carchy (`bin/debloat.sh`)
-
-[a-la-carchy](https://github.com/DanielCoffey1/a-la-carchy) (by
-[Daniel Coffey](https://github.com/DanielCoffey1)) is a community
-interactive TUI for removing default apps and webapps you don't want, with
-per-item selection and confirmation prompts, plus theme/keybind/monitor
-tweaks.
-
-a-la-carchy is third-party and has no LICENSE file in its repository, so
-this repo does not bundle or vendor it. Instead, the v3 installer offers to
-launch it at the end of installation via `bin/debloat.sh`, which fetches the
-script the same way upstream's own README instructs — but from a commit this
-repo has reviewed and pinned, verifying its sha256 checksum before running
-it. An unreviewed upstream change is refused rather than executed silently.
-You can also run `bin/debloat.sh` standalone at any time.
-
-One caveat: a-la-carchy itself offers to install an Omarchy menu shortcut
-that re-launches it from its upstream master branch. Launches via that
-shortcut are NOT covered by this repo's pin/checksum — if you enable it, you
-are trusting upstream directly; prefer re-running `bin/debloat.sh` instead.
-
-**Omarchy 4 (Quattro) users:** a-la-carchy targets Omarchy v3's
-waybar/walker stack and is not wired into the Quattro path. Use
-`bin/debloat-quattro.sh` (above) for per-item choice, or Omarchy's built-in
-`omarchy-remove-preinstalls` if you want to remove everything at once.
-
-## 8. Statement of Lack of Warranty
+## 7. Statement of Lack of Warranty
 
 THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -336,7 +265,7 @@ IN THE SOFTWARE.
 Use these scripts at your own risk. Always back up your system and important
 data before running installation scripts.
 
-## 9. How to Contribute
+## 8. How to Contribute
 
 We welcome contributions! Here's how:
 
