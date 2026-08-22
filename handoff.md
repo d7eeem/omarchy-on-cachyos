@@ -1,7 +1,7 @@
 # Handoff — omarchy-on-cachyos
 
 Orientation for whoever (human or agent) picks this project up next.
-Written 2026-08-19 at commit `d582373`. User-facing docs live in
+Updated 2026-08-22 at commit `253067e`. User-facing docs live in
 `README.md`; the full engineering record lives in `plans/` — this file is
 the map between them.
 
@@ -18,12 +18,17 @@ per-item debloater:
 | v4 per-item debloat picker | `bin/debloat-quattro.sh` | Built, mock-verified, needs real-v4 TUI run |
 | GPU dispatch | `bin/gpu-detect.sh` → `gpu-setup.sh` → `nvidia.sh`/`amd-rocm.sh` | Working; NVIDIA regex covers 580xx/470xx; AMD is VA-API-only |
 
+## Version policy
+
+`main` supports Omarchy 4 only. The complete legacy Omarchy 3 implementation
+is preserved on the local `v3` branch, created at `f32b850`; keep any legacy
+maintenance isolated there and do not reintroduce those scripts to `main`.
+
 ## How this got here (compressed history, 2026-08-17 → 08-19)
 
-1. Rebased the fork onto upstream `mroboff` main (14 commits incl. the
-   version-selection fetcher and detect-and-respect nvidia.sh), then ran a
-   full advisor audit → 14 plans, all executed by subagents in isolated
-   worktrees with reviewed diffs. `plans/README.md` has the status table.
+1. Rebased the fork onto upstream `mroboff` main, then ran a full advisor
+   audit → 14 plans, all executed in isolated worktrees with reviewed diffs.
+   `plans/README.md` has the status table.
 2. Load-bearing discoveries (each recorded in the relevant plan file):
    - **Omarchy v4.0.0 removed `install.sh` entirely** — v4 = Arch packages
      (`omarchy`, `omarchy-settings`, `omarchy-keyring`) applied by
