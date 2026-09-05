@@ -23,17 +23,22 @@ sudo chwd -i amd
 echo "[*] Installing ROCm and VA-API packages..."
 sudo pacman -S --needed --noconfirm rocm-core rocm-hip-runtime rocm-smi-lib libva-utils
 
-# 5. Add AMD ROCm environment variables for UWSM
-mkdir -p "$HOME/.config/uwsm"
-if ! grep -q '^# AMD ROCm$' "$HOME/.config/uwsm/env" 2>/dev/null; then
-    cat >>"$HOME/.config/uwsm/env" <<'EOF'
-
-# AMD ROCm
+# 5. Session environment for ROCm. ~/.config/uwsm/env is the user's own file
+# (often dotfile-managed), so it is never appended to. uwsm also sources
+# ~/.config/uwsm/env.d/* (uwsm(1) CONFIGURATION: "uwsm/env, uwsm/env.d/*"),
+# which gives this script a file it owns outright and can rewrite on re-runs.
+# OMOCACHY_SKIP_USER_CONFIGS=1 (install-omarchy-quattro.sh --skip-user-configs)
+# means $HOME is off limits: print the lines for the user to place themselves.
+GPU_ENV_FILE="$HOME/.config/uwsm/env.d/50-omocachy-gpu"
+GPU_ENV_CONTENT='# Written by omocachy bin/amd-rocm.sh (AMD ROCm)
 export LIBVA_DRIVER_NAME=radeonsi
 export ROCM_HOME=/opt/rocm
-export PATH=$ROCM_HOME/bin:$PATH
-EOF
-    echo "[*] AMD ROCm environment variables written to ~/.config/uwsm/env"
+export PATH=$ROCM_HOME/bin:$PATH'
+if [[ ${OMOCACHY_SKIP_USER_CONFIGS:-0} == 1 ]]; then
+    echo "[*] --skip-user-configs: not writing $GPU_ENV_FILE. Recommended session environment (add to your own uwsm env or env.d file):"
+    printf '%s\n' "$GPU_ENV_CONTENT"
 else
-    echo "[*] AMD ROCm environment variables already present."
+    mkdir -p "$(dirname "$GPU_ENV_FILE")"
+    printf '%s\n' "$GPU_ENV_CONTENT" >"$GPU_ENV_FILE"
+    echo "[*] AMD ROCm session environment written to $GPU_ENV_FILE"
 fi

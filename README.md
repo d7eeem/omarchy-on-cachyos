@@ -42,10 +42,12 @@ Install CachyOS before running anything here (see
 2. **Shell**: Fish (the CachyOS default). The installers assume it.
 3. **Desktop environment**: either a minimal install with no desktop, or the
    CachyOS Hyprland Desktop Environment (which also installs SDDM as the
-   display manager). Do not install GNOME or KDE. Omarchy's installer later
-   reconfigures SDDM for Wayland and autologin into its `omarchy` session;
-   this repo's installers clear any pre-existing `/etc/sddm.conf` first so
-   that reconfiguration actually takes effect (see §4.3).
+   display manager). Do not install GNOME or KDE. Omarchy's packages
+   reconfigure SDDM for Wayland and its `omarchy` session; this repo's
+   installer clears any pre-existing `/etc/sddm.conf` first so that
+   reconfiguration actually takes effect, and writes the remembered-user
+   state Omarchy's theme needs (see §4.4). Autologin is opt-in
+   (`--autologin`).
 4. **Full disk encryption**: your choice. Omarchy-the-distribution always
    encrypts; CachyOS makes it optional, and this project works either way.
 5. **Bootloader**: any. Limine gets the most seamless Omarchy 4 integration
@@ -73,10 +75,23 @@ bin/install-omarchy-quattro.sh             # then run it for real
 ```
 
 **Dry run first.** `--dry-run` performs all read-only detection for real
-(bootloader, LUKS, GPU vendor, current boot hooks, existing repos) but prints
-every state-changing or privileged command with a `DRYRUN:` prefix instead of
-executing it, so you can review the full plan before committing. `--yes`
-skips the confirmation prompt (safe to combine with `--dry-run`).
+(bootloader, LUKS, GPU vendor, current boot hooks, existing repos, service
+state) but prints every state-changing or privileged command with a `DRYRUN:`
+prefix — and the full content of every file it would write — instead of
+executing it, so you can review the plan before committing. `--yes` skips
+the confirmation prompt (safe to combine with `--dry-run`).
+
+**Two more flags:**
+
+- `--skip-user-configs` keeps the wrapper out of `$HOME` entirely: no
+  `/etc/skel` replay (`omarchy-reinstall-configs`), no
+  `omarchy-provision-user`, no fish `conf.d` file, and the GPU scripts print
+  their session-environment lines instead of writing
+  `~/.config/uwsm/env.d/50-omocachy-gpu`. Use it when a dotfiles tool owns
+  your home; deploy your dotfiles afterwards and run `omarchy-provision-user`
+  yourself if you want Omarchy's user finalization.
+- `--autologin` writes `/etc/sddm.conf.d/autologin.conf` for your user
+  (Omarchy's ISO default). Off by default.
 
 **What the wrapper does:**
 
@@ -84,58 +99,116 @@ skips the confirmation prompt (safe to combine with `--dry-run`).
    `SigLevel = Required DatabaseOptional` (the stable channel signs every
    package but not the repo database) and imports/locally signs the Omarchy
    packaging key.
-2. Installs `omarchy-settings`, `omarchy`, and `omarchy-nvim` via
-   `pacman -Syu --needed`.
+2. Backs up and pre-arms everything the next two steps would clobber (see
+   the guarantees below), then installs `omarchy-settings`, `omarchy`, and
+   `omarchy-nvim` via `pacman -Syu --needed`.
 3. Runs `omarchy-apply-system --install-user "$USER" --first-install` as
    root — Omarchy's own config/hardware/login/post-install stages.
-4. Seeds your existing user account the way Omarchy handles a pre-existing
-   (non-`useradd`-created) user: `omarchy-reinstall-configs` (resyncs
-   shipped defaults from `/etc/skel`) then `omarchy-provision-user
-   --first-install` (the runtime tweaks `/etc/skel` can't seed).
-5. Writes the Fish integration file (mise + zoxide) and dispatches GPU setup
-   (see §5).
+4. Restores CachyOS state, writes the SDDM login state, and — unless
+   `--skip-user-configs` — seeds your existing user the way Omarchy handles a
+   pre-existing (non-`useradd`-created) user: `omarchy-reinstall-configs`
+   (resyncs shipped defaults from `/etc/skel`) then `omarchy-provision-user
+   --first-install` (run in Omarchy's first-boot context so it does not
+   abort looking for the ISO's bundled Node tarball).
+5. Writes the Fish integration file (mise + zoxide), dispatches GPU setup
+   (see §5), rebuilds the initramfs once, and runs the assertion suite.
 
 **Reconciliation guarantees.** Omarchy's install stages are safe on a stock
-Omarchy machine but destructive on CachyOS if left alone. The wrapper backs
-up, restores, or overrides each of these:
+Omarchy machine but destructive on CachyOS if left alone. Each of these was
+verified against an installed Omarchy 4.0.2 (evidence in
+`plans/015-quattro-4.0.2-reconciliation.md`):
 
 - **CachyOS pacman repos are preserved.** `omarchy-apply-system` overwrites
   `/etc/pacman.conf` *and* `/etc/pacman.d/mirrorlist` with Omarchy's own
   versions partway through. The wrapper backs both up beforehand and
-  restores them immediately afterward, re-appending the `[omarchy]` stanza,
-  so your CachyOS repos are never left missing.
-- **Boot hooks are preserved.** `omarchy-settings` ships
+  restores them immediately afterward, re-appending the `[omarchy]` stanza.
+- **Boot hooks are transformed, not replaced.** `omarchy-settings` ships
   `/etc/mkinitcpio.conf.d/omarchy_hooks.conf`, which replaces your
-  `HOOKS=(...)` array. On a LUKS system that can silently swap the initramfs
-  unlock style (classic `encrypt` vs systemd `sd-encrypt`) and make the
-  machine unbootable. Before installing any packages, the wrapper captures
-  your *effective* current HOOKS (main config plus every conf.d override,
-  resolved the way mkinitcpio itself resolves them) and re-asserts them via
+  `HOOKS=(...)` with a udev/`encrypt` array. CachyOS boots LUKS with
+  `rd.luks.uuid=`, which only the systemd `sd-encrypt` hook understands, so
+  that array is unbootable at the next rebuild. Before installing anything the
+  wrapper captures your *effective* HOOKS and writes
   `/etc/mkinitcpio.conf.d/zz-cachyos-keep-hooks.conf`, which sorts after
-  Omarchy's file and therefore wins. `mkinitcpio -P` runs once, deliberately,
-  at the end.
-- **Snapper config is preserved.** Omarchy unconditionally overwrites
-  `/etc/snapper/configs/root`; the wrapper backs it up and restores the
-  CachyOS version after the apply.
+  Omarchy's file and *transforms* the array Omarchy set: it maps it to your
+  initramfs flavour (`udev→systemd`, `encrypt→sd-encrypt`,
+  `keymap consolefont→sd-vconsole`, `btrfs-overlayfs→sd-btrfs-overlayfs`) and
+  re-adds any pre-install hook that went missing (`lvm2`, `mdadm_udev`,
+  `resume`, ...), while keeping what Omarchy needs (`plymouth` is a hard
+  dependency; `kms` is not re-added where Omarchy deliberately drops it).
+  `--dry-run` prints the rendered file. The rebuild runs once, at the end,
+  via `limine-mkinitcpio` (Limine) or `/usr/bin/mkinitcpio -P`.
+- **Host identity is preserved.** `omarchy-settings`' install scriptlet
+  rewrites `/etc/os-release` to `ID=omarchy` and replaces `/etc/nsswitch.conf`
+  on every install *and upgrade*. The wrapper backs both up, restores them
+  after the apply, keeps copies in `/etc/cachyos-preserved/`, and installs a
+  pacman `PostTransaction` hook that restores them after every future
+  `omarchy-settings` upgrade. `/etc/security/faillock.conf` is left to
+  Omarchy (its PAM edits depend on it).
+- **Snapper is preserved.** Omarchy overwrites `/etc/snapper/configs/root`
+  and `/etc/conf.d/snapper` and disables `snapper-timeline.timer`; the
+  wrapper restores both files and re-enables the timer if it was enabled.
+- **iwd is preserved when NetworkManager uses it.** Omarchy disables
+  `iwd.service`; the wrapper re-enables it if `wifi.backend=iwd` is
+  configured.
+- **Limine entry-tool defaults stay CachyOS.** `omarchy-settings` ships
+  `/etc/limine-entry-tool.d/omarchy-{defaults,uki}.conf`
+  (`TARGET_OS_NAME="Omarchy"`, `ENABLE_UKI=yes`, a `BOOT_ORDER` without the
+  `*lts` entry), which would rename your boot entries, switch you to UKI mode
+  and break `limine-snapper-sync`. `/etc/default/limine` loads last, so the
+  wrapper appends a delimited block there with `TARGET_OS_NAME="CachyOS"`,
+  `ENABLE_UKI=no` and a `BOOT_ORDER` that includes `*lts` when
+  `linux-cachyos-lts` is installed — only for keys the file does not already
+  set. On Limine, `/boot/limine.conf` is also backed up and put back (then
+  `limine-update`) after `omarchy-reinstall-configs`, which otherwise
+  replaces it with Omarchy's branded one.
+- **You can log in.** Omarchy's SDDM theme has no username field; the
+  remembered-user state comes from the Omarchy ISO, not from any package. The
+  wrapper writes `/etc/sddm.conf.d/99-omarchy-login.conf`
+  (`RememberLastUser/Session=true`) and, if absent, `/var/lib/sddm/state.conf`
+  pointing at your user and the `omarchy` session. Any stale
+  `/etc/sddm.conf` is removed first (§4.4).
 - **User configs are backed up, not silently clobbered.**
   `omarchy-reinstall-configs` replays `/etc/skel` over your `$HOME`; the
-  wrapper first backs up every `$HOME` entry that `/etc/skel` would shadow.
+  wrapper first backs up every `$HOME` entry that `/etc/skel` would shadow
+  (or, with `--skip-user-configs`, never runs it).
 
 **Bootloader handling.** The `omarchy` package hard-depends on `limine`,
 `limine-mkinitcpio-hook`, and `limine-snapper-sync` — they arrive via pacman
-regardless of your actual bootloader. If Limine is your active bootloader,
-the wrapper leaves Omarchy's Limine integration fully active. If it is not
-(GRUB, systemd-boot), the wrapper disables `limine-snapper-sync.service` and
-neutralizes `limine-mkinitcpio-hook` with a same-named no-op override in
-`/etc/pacman.d/hooks/` — pacman gives that directory precedence over the
-package-owned copy, so the hook is fully disabled without modifying any
-package-owned file or breaking future pacman transactions.
+regardless of your actual bootloader, which is also why the wrapper detects
+the bootloader from the firmware (`bootctl status`) and loader configs rather
+than from installed packages. If Limine is your active bootloader, Omarchy's
+Limine integration is left fully active. If it is not (GRUB, systemd-boot),
+the wrapper disables `limine-snapper-sync.service`, replaces
+`limine-mkinitcpio-hook`'s `/etc/pacman.d/hooks/90-mkinitcpio-install.hook`
+with a copy of mkinitcpio's stock hook (protected by a `NoUpgrade` line in
+`/etc/pacman.conf`, so upgrades leave a `.pacnew`), and overrides its three
+`/usr/share/libalpm/hooks/*limine*` hooks with same-named no-ops in
+`/etc/pacman.d/hooks/`. Initramfs regeneration on kernel and driver upgrades
+keeps working; nothing Limine-specific runs.
 
 **Verification.** After the apply, a hard-failing assertion suite checks:
-CachyOS repos and `[omarchy]` both present; boot hooks still contain the
-pre-install LUKS unlock hook when LUKS is in use; `limine-snapper-sync`
-disabled on non-Limine machines; `sddm` and `NetworkManager` enabled; the
-snapper config matches its pre-install backup; and the `omarchy` CLI exists.
+`[omarchy]` and (on CachyOS) the `[cachyos*]` repos present;
+`/etc/os-release` still `ID=cachyos`; the HOOKS drop-in exists and the
+*effective* HOOKS keep your LUKS unlock flavour, `plymouth` and an overlayfs
+hook; `pacman -Qkk limine-mkinitcpio-hook` is clean (Limine) or reports only
+the `NoUpgrade`-managed hook; `limine-snapper-sync` disabled on non-Limine
+machines; `/etc/default/limine` carries `TARGET_OS_NAME` on a CachyOS Limine
+host; `sddm` and `NetworkManager` enabled; no `/etc/sddm.conf`; the snapper
+config matches its backup; and the `omarchy` CLI exists.
+
+**After the install: updates.** The `omarchy` package installs a
+`PreTransaction` pacman hook that aborts any direct `pacman -Syu` (and every
+tool that wraps one — `paru`, `yay`, `topgrade`, `cachyos-update`). Update
+with `omarchy update`, or set `OMARCHY_ALLOW_DIRECT_PACMAN=1` in the
+environment of the upgrade command. The wrapper prints this reminder when it
+finishes and uses the same variable for its own re-runs.
+
+**Status: not yet validated on a real CachyOS host.** Every guarantee above
+is grounded in the installed 4.0.2 package contents and exercised by
+`--dry-run` and a hook-transform harness, but the wrapper has so far only run
+for real on the maintainers' Omarchy-ISO machine (re-apply path). Treat the
+first CachyOS run as a test: take a snapshot, read the dry-run, keep a live
+USB handy.
 
 ## 4. How CachyOS/Omarchy Conflicts Are Resolved
 
@@ -146,24 +219,36 @@ actually conflict, resolved as follows:
 
 1. **Shell**: CachyOS defaults to Fish, Omarchy to Bash. Fish stays your
    default interactive shell.
-2. **TLDR client**: CachyOS ships Tealdeer (Rust). Tealdeer is preserved;
-   Omarchy's `tldr` package is excluded to avoid the file conflict.
+2. **TLDR client**: CachyOS ships Tealdeer (Rust). The wrapper installs only
+   `omarchy`, `omarchy-settings` and `omarchy-nvim`, none of which depend on
+   Omarchy's `tldr`, so there is no file conflict at install time. Note that
+   `omarchy reinstall pkgs` (and the ISO package list) does pull `tldr` and
+   will conflict with Tealdeer; pick one when that happens.
 3. **Mise and zoxide on Fish**: Omarchy wires mise activation only for Bash
    and installs zoxide without initializing it for Fish. The installer
-   write `~/.config/fish/conf.d/omocachy.fish` activating both —
-   a file that survives upstream changes to Omarchy's own activation
-   scripts.
+   writes `~/.config/fish/conf.d/omocachy.fish` activating both — a file
+   that survives upstream changes to Omarchy's own activation scripts
+   (skipped with `--skip-user-configs`).
 4. **Login system (SDDM)**: CachyOS's Hyprland option provides the SDDM
    package itself (§2.3); Omarchy then configures it and runs unmodified.
-   The SDDM config ships as package-owned `/etc/sddm.conf.d/` drop-ins and
-   `sddm.sh` only trims the PAM keyring lines. Because a legacy
+   The SDDM theme/Wayland config ships as package-owned `/etc/sddm.conf.d/`
+   drop-ins and `sddm.sh` only trims the PAM keyring lines. Because a legacy
    `/etc/sddm.conf` outranks every file in `/etc/sddm.conf.d/`
    (`man 5 sddm.conf`), the installer deletes any pre-existing
-   `/etc/sddm.conf` so Omarchy's drop-ins actually take effect. A stock
-   CachyOS Hyprland install ships nothing under `/etc/sddm.conf.d/`, so
-   there is no conflict there.
+   `/etc/sddm.conf` so Omarchy's drop-ins actually take effect. Omarchy's
+   theme has no username field and relies on SDDM remembering the last user,
+   which the ISO sets up but no package does; the wrapper writes that state
+   (`99-omarchy-login.conf`, `/var/lib/sddm/state.conf`) and offers
+   `--autologin` for the ISO's autologin default.
 5. **Full disk encryption**: left entirely to your CachyOS install choice
-   (§2.4); everything here works with or without LUKS.
+   (§2.4); everything here works with or without LUKS — including CachyOS's
+   systemd-initramfs `rd.luks.uuid=` style, which the HOOKS transform in §3
+   exists to preserve.
+6. **Host identity, snapshots, boot entries**: kept CachyOS's (`ID=cachyos`,
+   your snapper config and timeline timer, Limine entry names and non-UKI
+   layout) as described under "Reconciliation guarantees" in §3. Omarchy's
+   own tooling (`omarchy update`, theme and plymouth refreshes) keeps working
+   on top of that.
 
 ## 5. GPU Drivers
 
@@ -176,6 +261,10 @@ The installer uses the same vendor dispatch (`bin/gpu-detect.sh` →
 - **AMD**: installs the AMDGPU driver profile via `chwd` plus the ROCm
   runtime and VA-API packages (`bin/amd-rocm.sh`). VA-API only — Mesa
   removed VDPAU support upstream.
+- **Session environment**: both vendor scripts write their variables to
+  `~/.config/uwsm/env.d/50-omocachy-gpu` (uwsm sources `uwsm/env.d/*`), never
+  to your own `~/.config/uwsm/env`. With `--skip-user-configs` they print
+  the lines for you to place instead.
 - **Hybrid NVIDIA+AMD**: the NVIDIA path wins (see the detection order in
   `bin/gpu-detect.sh`).
 - **Intel-only**: left untouched.

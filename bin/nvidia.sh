@@ -46,22 +46,27 @@ fi
 # Ensure VA-API utils are present for hardware video acceleration
 sudo pacman -S --needed --noconfirm libva-utils
 
-# Apply NVIDIA environment variables for UWSM/Hyprland
-mkdir -p "$HOME/.config/uwsm"
-if ! grep -q "GBM_BACKEND=nvidia-drm" "$HOME/.config/uwsm/env" 2>/dev/null; then
-    cat >>"$HOME/.config/uwsm/env" <<'EOF'
-
-# NVIDIA
+# Session environment for the NVIDIA driver. ~/.config/uwsm/env is the user's
+# own file (often dotfile-managed), so it is never appended to. uwsm also
+# sources ~/.config/uwsm/env.d/* (uwsm(1) CONFIGURATION: "uwsm/env,
+# uwsm/env.d/*"), which gives this script a file it owns outright and can
+# rewrite on re-runs. OMOCACHY_SKIP_USER_CONFIGS=1 (install-omarchy-quattro.sh
+# --skip-user-configs) means $HOME is off limits: print the lines instead.
+GPU_ENV_FILE="$HOME/.config/uwsm/env.d/50-omocachy-gpu"
+GPU_ENV_CONTENT='# Written by omocachy bin/nvidia.sh (NVIDIA)
 export LIBVA_DRIVER_NAME=nvidia
 export GBM_BACKEND=nvidia-drm
 export __GLX_VENDOR_LIBRARY_NAME=nvidia
 export NVD_BACKEND=direct
 export MOZ_DISABLE_RDD_SANDBOX=1
-export CUDA_DISABLE_PERF_BOOST=1
-EOF
-    echo "[*] NVIDIA environment variables written to ~/.config/uwsm/env"
+export CUDA_DISABLE_PERF_BOOST=1'
+if [[ ${OMOCACHY_SKIP_USER_CONFIGS:-0} == 1 ]]; then
+    echo "[*] --skip-user-configs: not writing $GPU_ENV_FILE. Recommended session environment (add to your own uwsm env or env.d file):"
+    printf '%s\n' "$GPU_ENV_CONTENT"
 else
-    echo "[*] NVIDIA environment variables already present."
+    mkdir -p "$(dirname "$GPU_ENV_FILE")"
+    printf '%s\n' "$GPU_ENV_CONTENT" >"$GPU_ENV_FILE"
+    echo "[*] NVIDIA session environment written to $GPU_ENV_FILE"
 fi
 
 echo "[*] NVIDIA configuration complete."

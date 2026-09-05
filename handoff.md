@@ -1,7 +1,7 @@
 # Handoff — omocachy
 
 Orientation for whoever (human or agent) picks this project up next.
-Updated 2026-08-22. User-facing docs live in
+Updated 2026-09-06. User-facing docs live in
 `README.md`; the full engineering record lives in `plans/` — this file is
 the map between them.
 
@@ -14,9 +14,9 @@ per-item debloater:
 
 | Component | Script | State |
 |---|---|---|
-| Omarchy 4 "Quattro" package wrapper | `bin/install-omarchy-quattro.sh` | Built, dry-run-verified, **not yet run for real anywhere** |
+| Omarchy 4 "Quattro" package wrapper | `bin/install-omarchy-quattro.sh` | Reconciled against installed 4.0.2 (plan 015), dry-run-verified, **not yet run for real on CachyOS** |
 | v4 per-item debloat picker | `bin/debloat-quattro.sh` | Built, mock-verified, needs real-v4 TUI run |
-| GPU dispatch | `bin/gpu-detect.sh` → `gpu-setup.sh` → `nvidia.sh`/`amd-rocm.sh` | Working; NVIDIA regex covers 580xx/470xx; AMD is VA-API-only |
+| GPU dispatch | `bin/gpu-detect.sh` → `gpu-setup.sh` → `nvidia.sh`/`amd-rocm.sh` | Working; NVIDIA regex covers 580xx/470xx; AMD is VA-API-only; session env goes to `~/.config/uwsm/env.d/50-omocachy-gpu`, never `~/.config/uwsm/env` |
 
 ## Version policy
 
@@ -46,6 +46,14 @@ maintenance isolated there and do not reintroduce those scripts to `main`.
      during the audit. Verify upstream facts via `git clone`/`ls-remote`;
      tag- or commit-addressed raw URLs are acceptable, branch paths are not.
 3. README fully rewritten (Quattro-first, factored sections) 2026-08-19.
+4. 2026-09-06: the wrapper was audited against an *installed* Omarchy 4.0.2
+   (plan 015). Three plan-012 steps were wrong — bootloader detection via
+   `pacman -Qq limine` (tautological: omarchy depends on limine), the
+   wholesale HOOKS re-assert (dropped plymouth/btrfs-overlayfs, wrong
+   flavour for CachyOS's `rd.luks.uuid=` boot), and the `/usr/bin/true`
+   override of `90-mkinitcpio-install.hook` (which is the *only* active
+   mkinitcpio install hook once limine-mkinitcpio-hook is present, so it
+   switched off initramfs rebuilds). All replaced; see the plan for evidence.
 
 ## Working conventions (keep these)
 
@@ -57,9 +65,9 @@ maintenance isolated there and do not reintroduce those scripts to `main`.
   against (drift-check first). Executors run in isolated git worktrees; the
   reviewer re-runs done criteria, reads the whole diff, then fast-forwards
   main. Never merge a worktree branch while your shell's cwd is inside it.
-- **Lint gate**: `bash -n bin/*.sh` plus `shellcheck --severity=error
-  bin/*.sh` (locally via the `gh-runner-runner` docker image; in CI via the
-  `Jenkinsfile`). Run it before every push.
+- **Lint gate**: `bash -n bin/*.sh` plus `shellcheck --severity=warning
+  bin/*.sh` (shellcheck 0.11 locally; in CI via the `Jenkinsfile`). Run it
+  before every push.
 - Every state-changing script offers `--dry-run`; privileged ops flow
   through `run`/`run_root`-style helpers so dry-run is enforceable by grep.
 
@@ -82,12 +90,17 @@ root-equivalent; secrets in `.env`, unrecoverable, never commit or print):
 
 ## Release gates (the honest "not done" list)
 
-1. **Real-hardware/VM validation of the Quattro wrapper** — dry-run proved
-   the command plan, never the outcome. Wanted: one GRUB+LUKS VM, one
-   Limine VM, fresh CachyOS each. The dev machine (Limine+LUKS+AMD) is the
-   favorable in-place case — a
-   pre-assessed reinstall brief exists at
-   `~/Documents/omarchy-reinstall-brief.md` (machine-specific, not in repo).
+1. **Real CachyOS validation of the Quattro wrapper** — dry-run proved
+   the command plan and the rendered files, never the outcome. Wanted: one
+   GRUB+LUKS VM, one Limine+LUKS VM (systemd initramfs, `rd.luks.uuid=`),
+   fresh CachyOS each; run once with `--skip-user-configs` (dotfiles-managed
+   home) and once without. Specifically confirm: the transformed
+   `zz-cachyos-keep-hooks.conf` boots; `limine-snapper-sync` accepts
+   `TARGET_OS_NAME="CachyOS"`; `/etc/os-release` stays `ID=cachyos` across
+   an `omarchy-settings` upgrade (preserve hook); SDDM shows the remembered
+   user; `pacman -Qkk limine-mkinitcpio-hook` matches the assertion. The
+   dev machine (Omarchy ISO install, Limine+LUKS+AMD, udev initramfs) can
+   only exercise the re-apply path.
 2. **Real interactive run of `bin/debloat-quattro.sh` on a v4 machine**
    (same VM gate) — enumeration/dry-run are mock-verified only.
 3. **Jenkins agent secret** (above) — then confirm a green build on push.
@@ -97,8 +110,10 @@ root-equivalent; secrets in `.env`, unrecoverable, never commit or print):
 ## Fast orientation for an agent
 
 Read in this order: this file → `plans/README.md` (status + discoveries
-index) → the specific plan file for whatever you're touching (011 = v4
-strategy evidence, 012 = wrapper design + execution findings, 007/008 = GPU
-evidence trail). Trust the plan files' quoted evidence over memory; re-probe
-upstream (`basecamp/omarchy`) via git before relying on any claim about it —
-it moves fast and the CDN lies.
+index) → the specific plan file for whatever you're touching (015 = current
+wrapper behaviour with 4.0.2 evidence, 012 = original wrapper design, 011 =
+v4 strategy evidence, 007/008 = GPU evidence trail). Trust the plan files'
+quoted evidence over memory; the best upstream source is an *installed*
+Omarchy (`pacman -Ql omarchy omarchy-settings`, `/usr/share/omarchy/**`,
+`/var/lib/pacman/local/*/install`); re-probe `basecamp/omarchy` via git
+otherwise — it moves fast and the CDN lies.
