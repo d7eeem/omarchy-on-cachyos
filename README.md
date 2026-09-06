@@ -4,11 +4,15 @@ Install [DHH's Omarchy](https://omarchy.org) — an opinionated, Hyprland-based
 desktop — on top of [CachyOS](https://cachyos.org), a performance-optimized
 Arch Linux distribution, without either one clobbering the other.
 
-The project provides an Omarchy 4 installation path and optional debloater:
+The project provides an Omarchy 4 installation path, a profile migration for
+an Omarchy machine you are moving away from, and an optional debloater:
 
 | Path | Script | Status |
 |------|--------|--------|
 | **Omarchy 4 "Quattro"** (packages) | `bin/install-omarchy-quattro.sh` | **Recommended** |
+| Capture an existing Omarchy desktop profile | `bin/omocachy-profile-export.sh` | Run on the machine you are leaving |
+| Restore it onto the CachyOS machine | `bin/omocachy-profile-import.sh` | Run after the installer |
+| Check the result (also standalone) | `bin/omocachy-doctor.sh` | Read-only |
 | Optional debloater: per-item picker (Omarchy 4) | `bin/debloat-quattro.sh` | Opt-in, v4 only |
 
 This README assumes an experienced Arch user — comfortable with the shell and
@@ -19,15 +23,19 @@ with Arch terms like AUR.
 The installer takes an **already-installed CachyOS system** and puts Omarchy
 on top of it, resolving the places where the two distributions' defaults
 collide (see §4). It detects your GPU vendor and configures drivers
-accordingly (see §5).
+accordingly (see §5). If you are coming from a machine that already runs
+Omarchy, §6 carries your own desktop profile — the Quickshell layer, shell
+and tooling config, package and mise tool lists — across to it.
 
-Neither installer:
+What none of these scripts do:
 
-1. Installs CachyOS or any other Linux operating system
-2. Partitions, formats, or encrypts hard disks
-3. Installs or configures a boot loader
-4. Installs a display manager package (SDDM must already be present — see
+1. Install CachyOS or any other Linux operating system
+2. Partition, format, or encrypt hard disks
+3. Install or configure a boot loader
+4. Install a display manager package (SDDM must already be present — see
    §2.3 — before Omarchy's install step configures it further)
+5. Copy your documents or any other user data (§6 migrates a desktop
+   profile, not a home directory)
 
 All of the above happen when you install CachyOS itself.
 
@@ -303,7 +311,103 @@ For full hardware acceleration in **Firefox**:
    user_pref("gfx.x11-egl.force-enabled", true);
    ```
 
-## 6. Optional: Debloating
+## 6. Bringing an Existing Omarchy Machine With You
+
+Installing Omarchy 4 gives you Omarchy's *defaults*. If you are moving from a
+machine that already runs Omarchy, the desktop you actually use lives in your
+`$HOME`: `~/.config/omarchy/shell.json` (bar layout, plugin list, idle and
+lock rules), the Quickshell `plugins/` tree, themes, your Hyprland Lua
+config, mise tool versions, the packages you installed by hand, the user
+units you enabled. Three scripts carry that across:
+
+```bash
+# 1. on the machine you are leaving (read-only; writes only into --out)
+bin/omocachy-profile-export.sh --out /run/media/usb --archive
+
+# 2. on the CachyOS machine, AFTER bin/install-omarchy-quattro.sh
+bin/omocachy-profile-import.sh --bundle /run/media/usb/omocachy-profile-<host>-<ts>.tar.zst --dry-run
+bin/omocachy-profile-import.sh --bundle /run/media/usb/omocachy-profile-<host>-<ts>.tar.zst
+
+# 3. any time, on either machine
+bin/omocachy-doctor.sh --bundle /run/media/usb/omocachy-profile-<host>-<ts>.tar.zst
+```
+
+### What a bundle contains
+
+`share/profile-paths.conf` is the capture list (relative to `$HOME`, edit it
+or pass `--paths FILE`): `~/.config/omarchy`, `~/.config/hypr`, `uwsm`, the
+shells (fish/bash), `mise`, terminals and TUI config, `~/.config/systemd/user`,
+`~/.local/bin`. Alongside the payload the bundle records the explicit package
+list (native and foreign/AUR separately), your mise tools, the enabled user
+units, and a plugin table — id, whether it has a git remote, and which commit.
+
+What it deliberately does not contain: credential stores (`~/.ssh`,
+`~/.gnupg`, `~/.config/gh`, ...), regenerable state (mise runtimes, caches,
+`node_modules`, each plugin checkout's git-ignored build output) and your
+documents. A profile bundle is not a backup tool.
+
+`--slim` drops theme wallpapers (on the maintainer's machine: 520 MB of
+themes down to 348 MB). `--archive` also writes a `.tar.zst` plus `.sha256`
+for transport.
+
+**Treat a bundle as sensitive.** Plugin settings live in `shell.json`, API
+keys included, so the bundle directory is created `0700` and the archive
+`0600`. `SUMMARY.md` counts the credential-shaped paths that were dropped
+(`system/secrets-removed.txt`), the ones deliberately kept because they are
+scripts or assets (`system/secret-exemptions.txt`), and the captured files
+that carry credentials inline (`system/inline-secrets.txt`).
+
+### What the import does, and how to undo it
+
+Stages, selectable with `--only`/`--skip`: `configs`, `packages`, `mise`,
+`services`, `verify`.
+
+- **Nothing is deleted.** The payload is *merged* into `$HOME`: files the
+  bundle does not carry are left alone.
+- **Everything it would shadow is backed up first**, to
+  `~/.local/state/omocachy/backups/import-<ts>/`, together with a generated
+  `rollback.sh` (which itself supports `--dry-run`) that restores exactly the
+  paths that existed and removes exactly the ones the import introduced.
+- **Host-specific files are not restored on top of working ones.**
+  `~/.config/hypr/monitors.lua` and `~/.config/uwsm/env.d/50-omocachy-gpu`
+  describe the *old* machine — a foreign monitor layout can leave you without
+  a usable display. They are parked as `<name>.from-<source-host>` for you to
+  merge by hand; `--restore-host-specific` overrides that.
+- **Packages are filtered by policy, out loud.** Kernels and headers,
+  bootloaders, the NVIDIA/mesa driver stack, `omarchy*`/`quickshell*`,
+  base-system packages, `cachyos-*` metapackages and `tldr` are never
+  installed by the importer — the first three because they are boot- or
+  driver-critical and belong to your CachyOS install and `chwd`, the rest
+  because the installer or CachyOS already provides them. Each skip is
+  printed with its reason. Everything else is installed from your configured
+  repos in one pacman transaction, with names no repo has routed to
+  `paru`/`yay`; failures are reported, never silent.
+- **Offline is handled.** With no network the `packages` and `mise` stages
+  skip and leave their lists in
+  `~/.local/state/omocachy/reports/import-<ts>/`; re-run later with
+  `--only packages,mise`.
+- **User units are re-enabled** when the target actually has the unit; units
+  whose packages are missing are listed instead of failing.
+
+Log out and back in (or run `omarchy-restart-shell`) afterwards to pick up
+the restored Quickshell layer.
+
+### The doctor
+
+`bin/omocachy-doctor.sh` is read-only and exits non-zero on failure, so it
+works as a post-migration gate. It checks the system layer (`ID=cachyos`
+survived, `[omarchy]` and `[cachyos*]` repos, `omarchy`/`omarchy-settings`,
+a `quickshell` provider, no stale `/etc/sddm.conf`, the mkinitcpio HOOKS
+drop-in), the desktop profile (`shell.json` parses; **every plugin id it
+references resolves to a directory** — a missing plugin makes the shell drop
+that part of its graph with no visible error; `hyprctl configerrors`;
+`omarchy-shell` IPC), and tooling (mise tools installed, fish integration,
+GPU session env matching the *detected* vendor). With `--bundle` it also
+diffs the machine against a bundle and treats a missing local-only plugin —
+one with no git remote anywhere — as a hard failure, because the bundle is
+its only copy.
+
+## 7. Optional: Debloating
 
 Omarchy ships a large default app selection. This project offers an optional
 per-item debloater for the Omarchy 4 install path.
@@ -341,7 +445,7 @@ bin/debloat-quattro.sh             # then run it for real
 To restore everything at any time, run Omarchy's own
 `omarchy-install-preinstalls`.
 
-## 7. Statement of Lack of Warranty
+## 8. Statement of Lack of Warranty
 
 THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -354,7 +458,7 @@ IN THE SOFTWARE.
 Use these scripts at your own risk. Always back up your system and important
 data before running installation scripts.
 
-## 8. How to Contribute
+## 9. How to Contribute
 
 We welcome contributions! Here's how:
 

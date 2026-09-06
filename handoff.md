@@ -16,7 +16,9 @@ per-item debloater:
 |---|---|---|
 | Omarchy 4 "Quattro" package wrapper | `bin/install-omarchy-quattro.sh` | Reconciled against installed 4.0.2 (plan 015), dry-run-verified, **not yet run for real on CachyOS** |
 | v4 per-item debloat picker | `bin/debloat-quattro.sh` | Built, mock-verified, needs real-v4 TUI run |
-| GPU dispatch | `bin/gpu-detect.sh` → `gpu-setup.sh` → `nvidia.sh`/`amd-rocm.sh` | Working; NVIDIA regex covers 580xx/470xx; AMD is VA-API-only; session env goes to `~/.config/uwsm/env.d/50-omocachy-gpu`, never `~/.config/uwsm/env` |
+| Profile migration (export → import → doctor) | `bin/omocachy-profile-export.sh`, `bin/omocachy-profile-import.sh`, `bin/omocachy-doctor.sh` | Plan 016. Exercised end-to-end for real in the lab VM (export, import onto a pristine guest, screenshot, `./lab test` green, rollback, re-import). `packages`/`mise` stages verified only in classification/offline paths |
+| Shared helpers | `bin/lib/common.sh`, `bin/lib/profile.sh`, `share/profile-paths.conf` | `common.sh` is the installer's own dry-run contract, extracted verbatim (dry-run output byte-identical); `profile.sh` owns bundle schema 1 and the exclude/secret/package policies |
+| GPU dispatch | `bin/gpu-detect.sh` → `gpu-setup.sh` → `nvidia.sh`/`amd-rocm.sh` | Working; NVIDIA regex covers 580xx/470xx and now reports the GPU generation, installs `nvidia-vaapi-driver` and writes a `modeset=1` drop-in when nothing else does; AMD is VA-API-only; session env goes to `~/.config/uwsm/env.d/50-omocachy-gpu`, never `~/.config/uwsm/env`; both accept `--dry-run` |
 
 ## Version policy
 
@@ -65,9 +67,10 @@ maintenance isolated there and do not reintroduce those scripts to `main`.
   against (drift-check first). Executors run in isolated git worktrees; the
   reviewer re-runs done criteria, reads the whole diff, then fast-forwards
   main. Never merge a worktree branch while your shell's cwd is inside it.
-- **Lint gate**: `bash -n bin/*.sh` plus `shellcheck --severity=warning
-  bin/*.sh` (shellcheck 0.11 locally; in CI via the `Jenkinsfile`). Run it
-  before every push.
+- **Lint gate**: `bash -n bin/*.sh bin/lib/*.sh` plus `shellcheck
+  --severity=warning -x bin/*.sh bin/lib/*.sh` (`-x` so the sourced
+  `bin/lib/` helpers are followed; shellcheck 0.11 locally; in CI via the
+  `Jenkinsfile`). Run it before every push.
 - Every state-changing script offers `--dry-run`; privileged ops flow
   through `run`/`run_root`-style helpers so dry-run is enforceable by grep.
 
@@ -103,16 +106,25 @@ root-equivalent; secrets in `.env`, unrecoverable, never commit or print):
    only exercise the re-apply path.
 2. **Real interactive run of `bin/debloat-quattro.sh` on a v4 machine**
    (same VM gate) — enumeration/dry-run are mock-verified only.
-3. **Jenkins agent secret** (above) — then confirm a green build on push.
-4. Backlog seeds, if wanted: opt-in debloat prompt inside the Quattro
-   wrapper (deliberately deferred until gate 1 passes).
+3. **Profile migration against a network** (plan 016): the importer's
+   `packages` and `mise` stages have run only in their classification and
+   offline paths. Wanted: one online CachyOS target, `--only packages,mise`,
+   confirming the pacman transaction, the paru/yay fallback for names no
+   configured repo has, and `mise install`. `--restore-host-specific` and
+   the AUR-helper branch are code-reviewed, not executed.
+4. **Jenkins agent secret** (above) — then confirm a green build on push.
+5. Backlog seeds, if wanted: opt-in debloat prompt inside the Quattro
+   wrapper (deliberately deferred until gate 1 passes); teach the lab a
+   `LAB_DISTRO=cachyos` guest so gates 1 and 3 stop needing hardware.
 
 ## Fast orientation for an agent
 
 Read in this order: this file → `plans/README.md` (status + discoveries
-index) → the specific plan file for whatever you're touching (015 = current
-wrapper behaviour with 4.0.2 evidence, 012 = original wrapper design, 011 =
-v4 strategy evidence, 007/008 = GPU evidence trail). Trust the plan files'
+index) → the specific plan file for whatever you're touching (016 = profile
+migration: bundle format, secret/package policy, the adopt/reject table for
+the two candidate repositories; 015 = current wrapper behaviour with 4.0.2
+evidence, 012 = original wrapper design, 011 = v4 strategy evidence,
+007/008 = GPU evidence trail). Trust the plan files'
 quoted evidence over memory; the best upstream source is an *installed*
 Omarchy (`pacman -Ql omarchy omarchy-settings`, `/usr/share/omarchy/**`,
 `/var/lib/pacman/local/*/install`); re-probe `basecamp/omarchy` via git
