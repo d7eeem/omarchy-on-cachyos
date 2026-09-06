@@ -11,7 +11,7 @@ pipeline {
       steps {
         sh '''
           set -e
-          for f in bin/*.sh; do
+          for f in bin/*.sh bin/lib/*.sh; do
             bash -n "$f"
             echo "OK: $f"
           done
@@ -21,7 +21,8 @@ pipeline {
 
     stage('ShellCheck') {
       steps {
-        sh 'shellcheck --severity=error bin/*.sh'
+        // -x so shellcheck follows the sourced bin/lib/*.sh helpers.
+        sh 'shellcheck --severity=error -x bin/*.sh bin/lib/*.sh'
       }
     }
   }
